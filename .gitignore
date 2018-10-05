@@ -39,3 +39,8 @@ tmtagsHistory
 *.sublime-project
 *.sublime-workspace
 .bundle
+
+
+dist/*
+build/*
+SbxPy.egg-info/*

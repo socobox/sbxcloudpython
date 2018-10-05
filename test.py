@@ -1,5 +1,5 @@
-from QueryBuilder import QueryBuilder as Qb
-from SbxPy import SbxCore as Sc
+from sbxpy.QueryBuilder import QueryBuilder as Qb
+from sbxpy.__init__ import SbxCore as Sc
 import asyncio
 import os
 

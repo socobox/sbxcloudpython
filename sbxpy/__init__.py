@@ -1,13 +1,13 @@
 
-from QueryBuilder import QueryBuilder as Qb
+from sbxpy.QueryBuilder import QueryBuilder as Qb
 import aiohttp
 import asyncio
 from threading import Thread
 
 '''
-:mod:`SbxPy` -- Main Library
+:mod:`sbxpy` -- Main Library
 ===================================
-.. module:: SbxPy
+.. module:: sbxpy
    :platform: Unix, Windows
    :synopsis:  This is the module that use QueryBuilder to create all request used to communicate with SbxCloud
 .. moduleauthor:: Luis Guzman <lgguzman890414@gmail.com>  
