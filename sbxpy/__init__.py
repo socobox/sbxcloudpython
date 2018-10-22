@@ -2,6 +2,7 @@
 from sbxpy.QueryBuilder import QueryBuilder as Qb
 import aiohttp
 import asyncio
+import copy
 from threading import Thread
 
 '''
@@ -191,10 +192,10 @@ class Find:
         self.query.set_page_size(size)
         return self
 
-    async def __then(self):
+    async def __then(self, query_compiled):
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                    self.sbx_core.p(self.url), json=self.compile(),
+                    self.sbx_core.p(self.url), json=query_compiled,
                     headers=self.sbx_core.get_headers_json()) as resp:
                 return await resp.json()
 
@@ -203,10 +204,44 @@ class Find:
 
     async def find(self):
         self.set_url(True)
-        return await self.__then()
+        return await self.__then(self.query.compile())
 
-    def findCallback(self, callback):
+    def find_callback(self, callback):
         self.sbx_core.make_callback(self.find(), callback)
+
+    async def find_all_query(self):
+        self.set_page_size(500)
+        self.set_url(True)
+        queries = []
+        query_compiled = self.query.compile()
+        data  = await self.__then(query_compiled)
+        total_pages = data['total_pages']
+        for i in range(total_pages):
+            query_aux = copy.deepcopy(query_compiled)
+            query_aux['page'] = (i+1)
+            queries.append(self.__then(query_aux))
+        futures = self.__chunk_it(queries, min(10, len(queries)))
+        results  =  await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        data = []
+        for i in range(len(results)):
+            for j in range(len (results[i])):
+                data.append(results[i][j])
+        return data
+
+
+    def find_all_callback(self, callback):
+        self.sbx_core.make_callback(self.find_all_query(), callback)
+
+    def __chunk_it(self, seq, num):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
+
+        while last < len(seq):
+            out.append(asyncio.gather(*seq[int(last):int(last + avg)]))
+            last += avg
+
+        return out
 
 
 class ReferenceJoin:
@@ -293,7 +328,7 @@ class SbxCore:
         'row': '/data/v1/row',
         'find': '/data/v1/row/find',
         'update': '/data/v1/row/update',
-        'delete': '/data/v1/row/delete',
+        'delete': '/data/v1/row/',
         'downloadFile': '/content/v1/download',
         'uploadFile': '/content/v1/upload',
         'addFolder': '/content/v1/folder',

@@ -28,20 +28,26 @@ async def main(sci):
     print(login)
 
 
+
 sc = Sc(manage_loop=True)
 sc.initialize(os.environ['DOMAIN'], os.environ['APP-KEY'], os.environ['SERVER_URL'])
 loop = asyncio.new_event_loop()
 
 data = loop.run_until_complete(main(sc))
 
-
-def callback(error, result):
+def callback2(error, result):
     if error is not None:
         print(error)
     else:
         print(result)
     sc.close_connection()
 
+def callback(error, result):
+    sc.with_model(os.environ['MODEL_TEST']).find_all_callback(callback2)
+    if error is not None:
+        print(error)
+    else:
+        print(result)
 
 sc.loginCallback(os.environ['LOGIN'], os.environ['PASSWORD'], os.environ['DOMAIN'],callback)
 
