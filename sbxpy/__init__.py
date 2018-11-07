@@ -376,9 +376,6 @@ class SbxCore:
     def with_model(self, model):
         return Find(model, self)
 
-    def upsert(self, model, data, let_null):
-        return self.query_builder_to_insert(data, let_null).setModel(model).compile()
-
     def query_builder_to_insert(self, data, let_null):
         query = Qb().set_domain(SbxCore.environment['domain'])
         if isinstance(data, list):
@@ -387,6 +384,17 @@ class SbxCore:
         else:
             query.add_object(self.validate_data(data, let_null))
         return query
+
+    def is_update(self, data):
+        sw = False
+        if isinstance(data, list):
+            for item in data:
+                if "_KEY" in item:
+                    sw = True
+        else:
+            if "_KEY" in data:
+                sw = True
+        return sw
 
     def validate_data(self, data, let_null):
         listkeys = [key for key in data if let_null or data[key] is not None]
@@ -412,11 +420,21 @@ class SbxCore:
                     self.headers['Authorization'] = 'Bearer ' + data['token']
                 return data
 
-
     async def run(self, key, params):
         async with aiohttp.ClientSession() as session:
             params = {'key': key, 'params': params}
             async with session.post(self.p(self.urls['cloudscript_run']),params=params, headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def upsert(self, model, data, let_null=False):
+        query = self.query_builder_to_insert(data, let_null).set_model(model).compile()
+        return await self.__then(query, self.is_update(data))
+
+    async def __then(self, query_compiled, update):
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                    self.p(self.urls['row'] if not update else self.urls['update']), json=query_compiled,
+                    headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
 
@@ -427,7 +445,10 @@ class SbxCore:
     '''
 
     def loginCallback(self, login, password, domain, call):
-        self.make_callback(self.login(login, password, domain),call)
+        self.make_callback(self.login(login, password, domain), call)
+
+    def upsertCallback(self, model, data,  call, let_null=False):
+        self.make_callback(self.upsert(model, data, let_null), call)
 
     def make_callback(self, courutine, call):
         try:
