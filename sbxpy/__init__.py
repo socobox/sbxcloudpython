@@ -1,4 +1,3 @@
-
 from sbxpy.QueryBuilder import QueryBuilder as Qb
 import aiohttp
 import asyncio
@@ -214,20 +213,19 @@ class Find:
         self.set_url(True)
         queries = []
         query_compiled = self.query.compile()
-        data  = await self.__then(query_compiled)
+        data = await self.__then(query_compiled)
         total_pages = data['total_pages']
         for i in range(total_pages):
             query_aux = copy.deepcopy(query_compiled)
-            query_aux['page'] = (i+1)
+            query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
         futures = self.__chunk_it(queries, min(10, len(queries)))
-        results  =  await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
         data = []
         for i in range(len(results)):
-            for j in range(len (results[i])):
+            for j in range(len(results[i])):
                 data.append(results[i][j])
         return data
-
 
     def find_all_callback(self, callback):
         self.sbx_core.make_callback(self.find_all_query(), callback)
@@ -357,8 +355,6 @@ class SbxCore:
             self.t = Thread(target=start_loop)
             self.t.start()
 
-
-
     def get_headers_json(self):
         SbxCore.headers['Content-Type'] = 'application/json'
         return SbxCore.headers
@@ -423,7 +419,8 @@ class SbxCore:
     async def run(self, key, params):
         async with aiohttp.ClientSession() as session:
             params = {'key': key, 'params': params}
-            async with session.post(self.p(self.urls['cloudscript_run']),params=params, headers=self.get_headers_json()) as resp:
+            async with session.post(self.p(self.urls['cloudscript_run']), json=params,
+                                    headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
     async def upsert(self, model, data, let_null=False):
@@ -437,7 +434,6 @@ class SbxCore:
                     headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
-
     '''
     ======================================
     Callback Functions
@@ -447,28 +443,25 @@ class SbxCore:
     def loginCallback(self, login, password, domain, call):
         self.make_callback(self.login(login, password, domain), call)
 
-    def upsertCallback(self, model, data,  call, let_null=False):
+    def upsertCallback(self, model, data, call, let_null=False):
         self.make_callback(self.upsert(model, data, let_null), call)
 
-    def make_callback(self, courutine, call):
+    def make_callback(self, coroutine, call):
         try:
             if self.loop is None:
                 raise Exception('SbxCore must initialize with manage_loop True')
             else:
                 # future = asyncio.ensure_future(
-                #    courutine, loop=self.loop)
+                #    coroutine, loop=self.loop)
                 def callback(fut):
                     call(None, fut.result())
+
                 # future.add_done_callback(callback)
 
-                future= asyncio.run_coroutine_threadsafe(courutine, loop = self.loop)
+                future = asyncio.run_coroutine_threadsafe(coroutine, loop=self.loop)
                 future.add_done_callback(callback)
         except Exception as inst:
             call(inst, None)
-
-
-
-
 
     def close_connection(self):
         if self.loop is not None:
