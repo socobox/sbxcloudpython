@@ -466,5 +466,5 @@ class SbxCore:
     def close_connection(self):
         if self.loop is not None:
             if self.loop.is_running():
-                asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+                asyncio.gather(*asyncio.all_tasks()).cancel()
                 self.loop.stop()

@@ -32,8 +32,8 @@ async def main(sci):
 sc = Sc(manage_loop=True)
 sc.initialize(os.environ['DOMAIN'], os.environ['APP-KEY'], os.environ['SERVER_URL'])
 loop = asyncio.new_event_loop()
-
 data = loop.run_until_complete(main(sc))
+
 
 def callback2(error, result):
     if error is not None:
@@ -51,3 +51,4 @@ def callback(error, result):
 
 sc.loginCallback(os.environ['LOGIN'], os.environ['PASSWORD'], os.environ['DOMAIN'],callback)
 
+loop.run_forever()
