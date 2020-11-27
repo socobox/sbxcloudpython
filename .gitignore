@@ -40,7 +40,7 @@ tmtagsHistory
 *.sublime-workspace
 .bundle
 
-
+condalibrary/*
 dist/*
 build/*
 SbxPy.egg-info/*

@@ -17,10 +17,10 @@ from threading import Thread
 class Find:
 
     def __init__(self, model, sbx_core):
-        self.query = Qb().set_domain(SbxCore.environment['domain']).set_model(model)
+        self.query = Qb().set_domain(sbx_core.environment['domain']).set_model(model)
         self.lastANDOR = None
         self.sbx_core = sbx_core
-        self.url = SbxCore.urls['find']
+        self.url = self.sbx_core.urls['find']
 
     def compile(self):
         return self.query.compile()
@@ -199,7 +199,7 @@ class Find:
                 return await resp.json()
 
     def set_url(self, is_find):
-        self.url = SbxCore.urls['find'] if is_find else SbxCore.urls['delete']
+        self.url = self.sbx_core.urls['find'] if is_find else self.sbx_core.urls['delete']
 
     async def find(self):
         self.set_url(True)
@@ -336,7 +336,8 @@ class SbxCore:
         'payment_card': '/payment/v1/card',
         'payment_token': '/payment/v1/token',
         'password': '/user/v1/password/request',
-        'cloudscript_run': '/cloudscript/v1/run'
+        'cloudscript_run': '/cloudscript/v1/run',
+        'domain': '/data/v1/row/model/list'
     }
 
     def __init__(self, manage_loop=False):
@@ -356,24 +357,24 @@ class SbxCore:
             self.t.start()
 
     def get_headers_json(self):
-        SbxCore.headers['Content-Type'] = 'application/json'
-        return SbxCore.headers
+        self.headers['Content-Type'] = 'application/json'
+        return self.headers
 
     def p(self, path):
-        return SbxCore.environment['base_url'] + path
+        return self.environment['base_url'] + path
 
     def initialize(self, domain, app_key, base_url):
-        SbxCore.environment['domain'] = domain
-        SbxCore.environment['base_url'] = base_url
-        SbxCore.environment['app_key'] = app_key
-        SbxCore.headers['App-Key'] = app_key
+        self.environment['domain'] = domain
+        self.environment['base_url'] = base_url
+        self.environment['app_key'] = app_key
+        self.headers['App-Key'] = app_key
         return self
 
     def with_model(self, model):
         return Find(model, self)
 
     def query_builder_to_insert(self, data, let_null):
-        query = Qb().set_domain(SbxCore.environment['domain'])
+        query = Qb().set_domain(self.environment['domain'])
         if isinstance(data, list):
             for item in data:
                 query.add_object(self.validate_data(item, let_null))
@@ -415,6 +416,12 @@ class SbxCore:
                 if data['success']:
                     self.headers['Authorization'] = 'Bearer ' + data['token']
                 return data
+
+    async def list_domain(self):
+        async with aiohttp.ClientSession() as session:
+            params = {'domain':  self.environment['domain']}
+            async with session.get(self.p(self.urls['domain']), params=params, headers=self.get_headers_json()) as resp:
+                return await resp.json()
 
     async def run(self, key, params):
         async with aiohttp.ClientSession() as session:

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sbxpy",
-    version="0.0.7",
+    version="0.1.0",
     author="Luis Guzmán",
     author_email="lgguzman890414@gmail.com",
     description="This is the module  create all request used to communicate with SbxCloud",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/sbxcloud/sbxcloudpython",
     packages=setuptools.find_packages(),
     install_requires=[
-              'aiohttp',
+              'aiohttp>=3.7.3',
           ],
     classifiers=[
         "Programming Language :: Python :: 3",
