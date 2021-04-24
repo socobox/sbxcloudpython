@@ -475,3 +475,72 @@ class SbxCore:
             if self.loop.is_running():
                 asyncio.gather(*asyncio.all_tasks()).cancel()
                 self.loop.stop()
+
+
+class EventQuery:
+
+    def __init__(self, event, sbx_event):
+        self.sbx_event = sbx_event
+        self.url = self.sbx_event.urls['list'] + "/" + sbx_event.environment['domain'] + "/" + event
+
+    async def then(self, params):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    self.sbx_event.p(self.url), params=params,
+                    headers=self.sbx_event.get_headers_json()) as resp:
+                return await resp.json()
+
+
+
+class SbxEvent:
+    '''
+        This is the core of the communication with SbxEvent.
+        The concurrent task operates with asyncio
+        The request operates with aiohttp
+
+        curl --request GET \
+          --url 'https://sbx-svc-event-test.nubesocobox.com/api/event/129/ibf_delete_box?fromDate=2021-02-28T18%3A30%3A00.000Z&toDate=2021-04-23T14%3A12%3A04.990Z' \
+          --header 'accept-encoding: gzip, deflate, br' \
+          --header 'sbx-secret: '
+    '''
+    environment = {}
+    headers = {}
+    urls = {
+        'list': '/api/event'
+    }
+
+    def __init__(self, manage_loop=False):
+        '''
+        Create a instance of SbxCore.
+        :param manage_loop: if the event loop is manage by the library
+        '''
+        self.loop = None
+        self.t = None
+        if manage_loop:
+            def start_loop():
+                print('loop started')
+                self.loop.run_forever()
+
+            self.loop = asyncio.new_event_loop()
+            self.t = Thread(target=start_loop)
+            self.t.start()
+
+    def get_headers_json(self):
+        self.headers['Content-Type'] = 'application/json'
+        self.headers['accept-encoding'] = 'gzip, deflate, br'
+        return self.headers
+
+    def p(self, path):
+        return self.environment['base_url'] + path
+
+    def initialize(self, domain, app_key, base_url):
+        self.environment['domain'] = domain
+        self.environment['base_url'] = base_url
+        self.environment['sbx-secret'] = app_key
+        self.headers['sbx-secret'] = app_key
+        return self
+
+    def with_event(self, event):
+        return EventQuery(event, self)
+
+

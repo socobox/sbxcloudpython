@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: sbxpy
+Version: 0.1.0
+Summary: This is the module  create all request used to communicate with SbxCloud
+Home-page: https://github.com/sbxcloud/sbxcloudpython
+Author: Luis Guzmán
+Author-email: lgguzman890414@gmail.com
+License: UNKNOWN
+Description: This is the module  create all request used to communicate with SbxCloud
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
