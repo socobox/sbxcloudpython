@@ -196,7 +196,10 @@ class Find:
             async with session.post(
                     self.sbx_core.p(self.url), json=query_compiled,
                     headers=self.sbx_core.get_headers_json()) as resp:
-                return await resp.json()
+                print("sent")
+                r = await resp.json()
+                print("response")
+                return r
 
     def set_url(self, is_find):
         self.url = self.sbx_core.urls['find'] if is_find else self.sbx_core.urls['delete']
@@ -209,7 +212,7 @@ class Find:
         self.sbx_core.make_callback(self.find(), callback)
 
     async def find_all_query(self):
-        self.set_page_size(500)
+        self.set_page_size(1000)
         self.set_url(True)
         queries = []
         query_compiled = self.query.compile()
@@ -219,7 +222,7 @@ class Find:
             query_aux = copy.deepcopy(query_compiled)
             query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
-        futures = self.__chunk_it(queries, min(10, len(queries)))
+        futures = self.__chunk_it(queries, min(2, len(queries)))
         results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
         data = []
         for i in range(len(results)):
