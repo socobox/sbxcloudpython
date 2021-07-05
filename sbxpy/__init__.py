@@ -211,8 +211,8 @@ class Find:
     def find_callback(self, callback):
         self.sbx_core.make_callback(self.find(), callback)
 
-    async def find_all_query(self):
-        self.set_page_size(1000)
+    async def find_all_query(self, page_size=1000, max_in_parallel=2):
+        self.set_page_size(page_size)
         self.set_url(True)
         queries = []
         query_compiled = self.query.compile()
@@ -222,7 +222,7 @@ class Find:
             query_aux = copy.deepcopy(query_compiled)
             query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
-        futures = self.__chunk_it(queries, min(2, len(queries)))
+        futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
         results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
         data = []
         for i in range(len(results)):
