@@ -2,6 +2,7 @@ from sbxpy.QueryBuilder import QueryBuilder as Qb
 import aiohttp
 import asyncio
 import copy
+import math
 from threading import Thread
 
 '''
@@ -227,7 +228,7 @@ class Find:
         data = []
         for i in range(len(results)):
             for j in range(len(results[i])):
-                data.append(results[i][j])
+                data.extend(results[i][j])
         return data
 
     def find_all_callback(self, callback):
@@ -547,3 +548,86 @@ class SbxEvent:
         return EventQuery(event, self)
 
 
+class WorkFlowQuery:
+
+    def __init__(self,  sbx_workflow):
+        self.sbx_workflow = sbx_workflow
+        self.url = self.sbx_workflow.urls['api'] + sbx_workflow.environment['domain'] + self.sbx_workflow.urls['list_process_execution']
+
+    async def then(self, params):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    self.sbx_workflow.p(self.url), params=params,
+                    headers=self.sbx_workflow.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def find_all(self, params, page_size=1000, max_in_parallel=2):
+
+        params['size'] = page_size
+        params['page'] = 0
+        queries = []
+        data = await self.then(params)
+        total_pages = math.ceil(data['totalCount']/page_size)
+        for i in range(total_pages):
+            params_aux = copy.deepcopy(params)
+            params_aux['page'] = (i + 1)
+            queries.append(self.then(params_aux))
+        futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+        results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        data = []
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                data.extend(results[i][j])
+        return data
+
+
+
+class SbxWorkflow:
+    '''
+        This is the core of the communication with SbxEvent.
+        The concurrent task operates with asyncio
+        The request operates with aiohttp
+
+        curl --request GET \
+          --url 'https://sbx-svc-event-test.nubesocobox.com/api/event/129/ibf_delete_box?fromDate=2021-02-28T18%3A30%3A00.000Z&toDate=2021-04-23T14%3A12%3A04.990Z' \
+          --header 'accept-encoding: gzip, deflate, br' \
+          --header 'sbx-secret: '
+    '''
+    environment = {}
+    headers = {}
+    urls = {
+        'api': '/api/v2/',
+        'list_process_execution': '/wf/process/execution',
+    }
+
+    def __init__(self, manage_loop=False):
+        '''
+        Create a instance of SbxCore.
+        :param manage_loop: if the event loop is manage by the library
+        '''
+        self.loop = None
+        self.t = None
+        if manage_loop:
+            def start_loop():
+                print('loop started')
+                self.loop.run_forever()
+
+            self.loop = asyncio.new_event_loop()
+            self.t = Thread(target=start_loop)
+            self.t.start()
+
+    def get_headers_json(self):
+        self.headers['Content-Type'] = 'application/json'
+        self.headers['accept-encoding'] = 'gzip, deflate, br'
+        return self.headers
+
+    def p(self, path):
+        return self.environment['base_url'] + path
+
+    def initialize(self, domain,  base_url):
+        self.environment['domain'] = domain
+        self.environment['base_url'] = base_url
+        return self
+
+    def with_Process_execution(self):
+        return WorkflowQuery(self)
