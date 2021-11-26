@@ -495,7 +495,6 @@ class EventQuery:
                 return await resp.json()
 
 
-
 class SbxEvent:
     '''
         This is the core of the communication with SbxEvent.
@@ -548,11 +547,11 @@ class SbxEvent:
         return EventQuery(event, self)
 
 
-class WorkFlowQuery:
+class WorkflowQuery:
 
     def __init__(self,  sbx_workflow):
         self.sbx_workflow = sbx_workflow
-        self.url = self.sbx_workflow.urls['api'] + sbx_workflow.environment['domain'] + self.sbx_workflow.urls['list_process_execution']
+        self.url = self.sbx_workflow.urls['api'] + self.sbx_workflow.environment['domain'] + self.sbx_workflow.urls['list_process_execution']
 
     async def then(self, params):
         async with aiohttp.ClientSession() as session:
@@ -579,7 +578,6 @@ class WorkFlowQuery:
             for j in range(len(results[i])):
                 data.extend(results[i][j])
         return data
-
 
 
 class SbxWorkflow:
@@ -629,5 +627,5 @@ class SbxWorkflow:
         self.environment['base_url'] = base_url
         return self
 
-    def with_Process_execution(self):
+    def with_process_execution(self):
         return WorkflowQuery(self)
