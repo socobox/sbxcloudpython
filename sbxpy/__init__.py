@@ -553,6 +553,17 @@ class WorkflowQuery:
         self.sbx_workflow = sbx_workflow
         self.url = self.sbx_workflow.urls['api'] + self.sbx_workflow.environment['domain'] + self.sbx_workflow.urls['list_process_execution']
 
+    def __chunk_it(self, seq, num):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
+
+        while last < len(seq):
+            out.append(asyncio.gather(*seq[int(last):int(last + avg)]))
+            last += avg
+
+        return out
+
     async def then(self, params):
         async with aiohttp.ClientSession() as session:
             async with session.get(
