@@ -219,7 +219,7 @@ class Find:
         query_compiled = self.query.compile()
         data = await self.__then(query_compiled)
         total_pages = data['total_pages']
-        for i in range(total_pages):
+        for i in range(total_pages+1):
             query_aux = copy.deepcopy(query_compiled)
             query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
@@ -580,14 +580,14 @@ class WorkflowQuery:
         total_pages = math.ceil(data['totalCount']/page_size)
         for i in range(total_pages):
             params_aux = copy.deepcopy(params)
-            params_aux['page'] = (i + 1)
+            params_aux['page'] = i
             queries.append(self.then(params_aux))
         futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
         results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
         data = []
         for i in range(len(results)):
             for j in range(len(results[i])):
-                data.extend(results[i][j])
+                data.append(results[i][j])
         return data
 
 
