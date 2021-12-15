@@ -644,99 +644,99 @@ class SbxWorkflow:
     def with_process_execution(self):
         return WorkflowQuery(self)
 
-    class UserQuery:
+class UserQuery:
 
-        def __init__(self, crm_user):
-            self.crm_user = crm_user
-            self.url = self.crm_user.urls['api'] + self.crm_user.environment['domain'] + self.crm_user.urls[
-                'list_users']
+    def __init__(self, crm_user):
+        self.crm_user = crm_user
+        self.url = self.crm_user.urls['api'] + self.crm_user.environment['domain'] + self.crm_user.urls[
+            'list_users']
 
-        def __chunk_it(self, seq, num):
-            avg = len(seq) / float(num)
-            out = []
-            last = 0.0
+    def __chunk_it(self, seq, num):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
 
-            while last < len(seq):
-                out.append(asyncio.gather(*seq[int(last):int(last + avg)]))
-                last += avg
+        while last < len(seq):
+            out.append(asyncio.gather(*seq[int(last):int(last + avg)]))
+            last += avg
 
-            return out
+        return out
 
-        async def then(self, params):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                        self.crm_user.p(self.url), params=params,
-                        headers=self.crm_user.get_headers_json()) as resp:
-                    return await resp.json()
+    async def then(self, params):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    self.crm_user.p(self.url), params=params,
+                    headers=self.crm_user.get_headers_json()) as resp:
+                return await resp.json()
 
-        async def find_all(self, params, page_size=1000, max_in_parallel=2):
+    async def find_all(self, params, page_size=1000, max_in_parallel=2):
 
-            params['size'] = page_size
-            params['page'] = 0
-            queries = []
-            data = []
-            temp = await self.then(params)
-            total_pages = math.ceil(temp['totalCount'] / page_size)
-            for i in range(total_pages):
-                params_aux = copy.deepcopy(params)
-                params_aux['page'] = i
-                queries.append(self.then(params_aux))
-            if len(queries) > 0:
-                futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
-                results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
-                for i in range(len(results)):
-                    for j in range(len(results[i])):
-                        data.append(results[i][j])
-            else:
-                data.append(temp)
-            return data
+        params['size'] = page_size
+        params['page'] = 0
+        queries = []
+        data = []
+        temp = await self.then(params)
+        total_pages = math.ceil(temp['totalCount'] / page_size)
+        for i in range(total_pages):
+            params_aux = copy.deepcopy(params)
+            params_aux['page'] = i
+            queries.append(self.then(params_aux))
+        if len(queries) > 0:
+            futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+            results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+            for i in range(len(results)):
+                for j in range(len(results[i])):
+                    data.append(results[i][j])
+        else:
+            data.append(temp)
+        return data
 
-    class SbxCRMUser:
+class SbxCRMUser:
+    '''
+        This is the core of the communication with SbxEvent.
+        The concurrent task operates with asyncio
+        The request operates with aiohttp
+
+        curl --request GET \
+          --url 'https://sbx-svc-event-test.nubesocobox.com/api/event/129/ibf_delete_box?fromDate=2021-02-28T18%3A30%3A00.000Z&toDate=2021-04-23T14%3A12%3A04.990Z' \
+          --header 'accept-encoding: gzip, deflate, br' \
+          --header 'sbx-secret: '
+    '''
+    environment = {}
+    headers = {}
+    urls = {
+        'api': '/api/v2/',
+        'list_users': '/security/auth/users',
+    }
+
+    def __init__(self, manage_loop=False):
         '''
-            This is the core of the communication with SbxEvent.
-            The concurrent task operates with asyncio
-            The request operates with aiohttp
-
-            curl --request GET \
-              --url 'https://sbx-svc-event-test.nubesocobox.com/api/event/129/ibf_delete_box?fromDate=2021-02-28T18%3A30%3A00.000Z&toDate=2021-04-23T14%3A12%3A04.990Z' \
-              --header 'accept-encoding: gzip, deflate, br' \
-              --header 'sbx-secret: '
+        Create a instance of SbxCore.
+        :param manage_loop: if the event loop is manage by the library
         '''
-        environment = {}
-        headers = {}
-        urls = {
-            'api': '/api/v2/',
-            'list_users': '/security/auth/users',
-        }
+        self.loop = None
+        self.t = None
+        if manage_loop:
+            def start_loop():
+                print('loop started')
+                self.loop.run_forever()
 
-        def __init__(self, manage_loop=False):
-            '''
-            Create a instance of SbxCore.
-            :param manage_loop: if the event loop is manage by the library
-            '''
-            self.loop = None
-            self.t = None
-            if manage_loop:
-                def start_loop():
-                    print('loop started')
-                    self.loop.run_forever()
+            self.loop = asyncio.new_event_loop()
+            self.t = Thread(target=start_loop)
+            self.t.start()
 
-                self.loop = asyncio.new_event_loop()
-                self.t = Thread(target=start_loop)
-                self.t.start()
+    def get_headers_json(self):
+        self.headers['Content-Type'] = 'application/json'
+        self.headers['accept-encoding'] = 'gzip, deflate, br'
+        return self.headers
 
-        def get_headers_json(self):
-            self.headers['Content-Type'] = 'application/json'
-            self.headers['accept-encoding'] = 'gzip, deflate, br'
-            return self.headers
+    def p(self, path):
+        return self.environment['base_url'] + path
 
-        def p(self, path):
-            return self.environment['base_url'] + path
+    def initialize(self, domain, base_url):
+        self.environment['domain'] = domain
+        self.environment['base_url'] = base_url
+        return self
 
-        def initialize(self, domain, base_url):
-            self.environment['domain'] = domain
-            self.environment['base_url'] = base_url
-            return self
-
-        def with_process_execution(self):
-            return UserQuery(self)
+    def with_process_execution(self):
+        return UserQuery(self)
