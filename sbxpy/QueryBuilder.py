@@ -40,6 +40,10 @@ class QueryBuilder:
         self.q['fetch'] = array_of_model_names
         return self
 
+    def reverse_fetch(self, array_of_model_names):
+        self.q['rev_fetch'] = array_of_model_names
+        return self
+
     def add_object_array(self, array):
         if 'where'  in self.q:
             del self.q['where']

@@ -184,6 +184,10 @@ class Find:
         self.query.fetch_models(array)
         return self
 
+    def reverse_fetch(self, array):
+        self.query.reverse_fetch(array)
+        return self
+
     def set_page(self, page):
         self.query.set_page(page)
         return self
