@@ -557,6 +557,10 @@ class WorkflowQuery:
         self.sbx_workflow = sbx_workflow
         self.url = self.sbx_workflow.urls['api'] + self.sbx_workflow.environment['domain'] + self.sbx_workflow.urls['list_process_execution']
 
+    def setUrl(self, url):
+        self.url = self.sbx_workflow.urls['api'] + self.sbx_workflow.environment['domain'] + url
+        return self
+
     def __chunk_it(self, seq, num):
         avg = len(seq) / float(num)
         out = []
@@ -648,12 +652,19 @@ class SbxWorkflow:
     def with_process_execution(self):
         return WorkflowQuery(self)
 
+    def with_url(self, url):
+        return WorkflowQuery(self).setUrl(url)
+
 class UserQuery:
 
     def __init__(self, crm_user):
         self.crm_user = crm_user
         self.url = self.crm_user.urls['api'] + self.crm_user.environment['domain'] + self.crm_user.urls[
             'list_users']
+
+    def setUrl(self, url):
+        self.url = self.crm_user.urls['api'] + self.crm_user.environment['domain'] + url
+        return self
 
     def __chunk_it(self, seq, num):
         avg = len(seq) / float(num)
@@ -744,3 +755,6 @@ class SbxCRMUser:
 
     def with_process_execution(self):
         return UserQuery(self)
+
+    def with_url(self, url):
+        return UserQuery(self).setUrl(url)
