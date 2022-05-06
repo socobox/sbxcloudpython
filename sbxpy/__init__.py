@@ -4,6 +4,7 @@ import asyncio
 import copy
 import math
 from threading import Thread
+import datetime
 
 '''
 :mod:`sbxpy` -- Main Library
@@ -497,6 +498,50 @@ class EventQuery:
                     self.sbx_event.p(self.url), params=params,
                     headers=self.sbx_event.get_headers_json()) as resp:
                 return await resp.json()
+
+    def __chunk_it(self, seq, num):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
+        while last < len(seq):
+            out.append(asyncio.gather(*seq[int(last):int(last + avg)]))
+            last += avg
+
+        return out
+
+    async def get_all(self, params, division, max_in_parallel=2):
+        tempParams = { "toDate":   params["toDate"], "fromDate": params["fromDate"]}
+        queries = []
+
+        N = division
+        test_date1 = datetime.datetime.fromisoformat(tempParams["fromDate"][:-1])
+        test_date2 = datetime.datetime.fromisoformat(tempParams["toDate"][:-1])
+        temp = []
+
+        diff = (test_date2 - test_date1) // N
+        for idx in range(0, N):
+            temp.append((test_date1 + idx * diff))
+
+        dates = []
+        for sub in temp:
+            dates.append(sub.isoformat()+"Z")
+
+        print(N)
+        print(dates)
+        for i in range(len(dates)-1):
+            tempParams["fromDate"] = dates[i]
+            tempParams["toDate"] = dates[i+1]
+            queries.append(self.then(tempParams))
+
+        futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+        results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        data = []
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                if "items" in results[i][j]:
+                    data.extend(results[i][j]["items"])
+
+        return {"items": data}
 
 
 class SbxEvent:
