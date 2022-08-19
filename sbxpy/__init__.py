@@ -509,7 +509,7 @@ class EventQuery:
 
         return out
 
-    async def gather_with_concurrency(n, *tasks):
+    async def gather_with_concurrency(self, n, *tasks):
         semaphore = asyncio.Semaphore(n)
 
         async def sem_task(task):
@@ -742,7 +742,7 @@ class UserQuery:
                     headers=self.crm_user.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def gather_with_concurrency(n, *tasks):
+    async def gather_with_concurrency(self, n, *tasks):
         semaphore = asyncio.Semaphore(n)
 
         async def sem_task(task):
