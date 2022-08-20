@@ -214,6 +214,16 @@ class Find:
         self.set_url(True)
         return await self.__then(self.query.compile())
 
+    async def gather_with_concurrency(self, n, *tasks):
+        semaphore = asyncio.Semaphore(n)
+
+        async def sem_task(task):
+            async with semaphore:
+                return await task
+
+        responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
+        return responses
+
     def find_callback(self, callback):
         self.sbx_core.make_callback(self.find(), callback)
 
@@ -228,12 +238,16 @@ class Find:
             query_aux = copy.deepcopy(query_compiled)
             query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
-        futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
-        results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+        # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        # data = []
+        # for i in range(len(results)):
+        #     for j in range(len(results[i])):
+        #         data.extend(results[i][j])
         data = []
+        results = await  self.gather_with_concurrency(max_in_parallel, *queries)
         for i in range(len(results)):
-            for j in range(len(results[i])):
-                data.extend(results[i][j])
+            data.append(results[i])
         return data
 
     def find_all_callback(self, callback):
@@ -514,9 +528,10 @@ class EventQuery:
 
         async def sem_task(task):
             async with semaphore:
-                await task
+                return await task
 
-        await asyncio.gather(*(sem_task(task) for task in tasks))
+        responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
+        return responses
     async def get_all(self, params, division, max_in_parallel=2):
         tempParams = { "toDate":   params["toDate"], "fromDate": params["fromDate"]}
         queries = []
@@ -549,7 +564,7 @@ class EventQuery:
         #         if "items" in results[i][j]:
         #             data.extend(results[i][j]["items"])
         data = []
-        results = await self.gather_with_concurrency(max_in_parallel, queries)
+        results = await self.gather_with_concurrency(max_in_parallel, *queries)
         for i in range(len(results)):
             if "items" in results[i]:
                 data.extend(results[i]["items"])
@@ -630,6 +645,16 @@ class WorkflowQuery:
 
         return out
 
+    async def gather_with_concurrency(self, n, *tasks):
+        semaphore = asyncio.Semaphore(n)
+
+        async def sem_task(task):
+            async with semaphore:
+                return await task
+
+        responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
+        return responses
+
     async def then(self, params):
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -650,11 +675,14 @@ class WorkflowQuery:
             params_aux['page'] = i
             queries.append(self.then(params_aux))
         if len(queries) > 0:
-            futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
-            results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+            # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+            # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+            # for i in range(len(results)):
+            #     for j in range(len(results[i])):
+            #         data.append(results[i][j])
+            results = await  self.gather_with_concurrency(max_in_parallel, *queries)
             for i in range(len(results)):
-                for j in range(len(results[i])):
-                    data.append(results[i][j])
+                data.append(results[i])
         else:
             data.append(temp)
         return data
@@ -747,9 +775,10 @@ class UserQuery:
 
         async def sem_task(task):
             async with semaphore:
-                await task
+                return await task
 
-        await asyncio.gather(*(sem_task(task) for task in tasks))
+        responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
+        return responses
 
     async def find_all(self, params, page_size=1000, max_in_parallel=2):
 
@@ -769,7 +798,7 @@ class UserQuery:
             #for i in range(len(results)):
             #    for j in range(len(results[i])):
             #        data.append(results[i][j])
-            results = await self.gather_with_concurrency(max_in_parallel, queries)
+            results = await  self.gather_with_concurrency(max_in_parallel, *queries)
             for i in range(len(results)):
                 data.append(results[i])
         else:
