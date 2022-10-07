@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sbxpy",
-    version="0.3.5",
+    version="0.3.6",
     author="Luis Guzmán",
     author_email="lgguzman890414@gmail.com",
     description="This is the module  create all request used to communicate with SbxCloud",

@@ -446,10 +446,10 @@ class SbxCore:
             async with session.get(self.p(self.urls['domain']), params=params, headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def run(self, key, params):
+    async def run(self, key, params, url=None):
         async with aiohttp.ClientSession() as session:
             params = {'key': key, 'params': params}
-            async with session.post(self.p(self.urls['cloudscript_run']), json=params,
+            async with session.post(self.p(self.urls['cloudscript_run'] if url is None else url), json=params,
                                     headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
