@@ -547,7 +547,7 @@ class EventQuery:
 
         dates = []
         for sub in temp:
-            dates.append(sub.isoformat()+".000Z")
+            dates.append(sub.strftime("%Y-%m-%dT%H:%M:%S.000Z"))
 
         print(N)
         print(dates)
@@ -555,6 +555,7 @@ class EventQuery:
             tempParams["fromDate"] = dates[i]
             tempParams["toDate"] = dates[i+1]
             queries.append(self.then(tempParams))
+            tempParams = copy.copy(tempParams)
 
         # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
         # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
