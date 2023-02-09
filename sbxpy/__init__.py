@@ -198,7 +198,9 @@ class Find:
         return self
 
     async def __then(self, query_compiled):
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=10*60, connect=None,
+                      sock_connect=None, sock_read=None)
+        async with aiohttp.ClientSession( timeout=timeout) as session:
             async with session.post(
                     self.sbx_core.p(self.url), json=query_compiled,
                     headers=self.sbx_core.get_headers_json()) as resp:
@@ -507,7 +509,9 @@ class EventQuery:
         self.url = self.sbx_event.urls['list'] + "/" + sbx_event.environment['domain'] + "/" + event
 
     async def then(self, params):
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=10 * 60, connect=None,
+                                        sock_connect=None, sock_read=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(
                     self.sbx_event.p(self.url), params=params,
                     headers=self.sbx_event.get_headers_json()) as resp:
