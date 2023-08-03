@@ -13,6 +13,3 @@ requirements:
 
   run:
     - python
-
-build:
-  noarch: python
