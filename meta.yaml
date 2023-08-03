@@ -1,0 +1,15 @@
+package:
+  name: "sbxpy"
+  version: "0.3.12.1"
+
+source:
+  git_url: "https://github.com/socobox/sbxcloudpython.git"
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - aiohttp
+
+  run:
+    - python
