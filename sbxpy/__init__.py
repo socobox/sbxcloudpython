@@ -200,11 +200,11 @@ class Find:
     async def __then(self, query_compiled):
         timeout = aiohttp.ClientTimeout(total=10*60, connect=None,
                       sock_connect=None, sock_read=None)
+        print("sent")
         async with aiohttp.ClientSession( timeout=timeout) as session:
             async with session.post(
                     self.sbx_core.p(self.url), json=query_compiled,
                     headers=self.sbx_core.get_headers_json()) as resp:
-                print("sent")
                 r = await resp.json()
                 print("response")
                 return r
@@ -215,6 +215,17 @@ class Find:
     async def find(self):
         self.set_url(True)
         return await self.__then(self.query.compile())
+
+    async def delete(self, page_size=1000, max_in_parallel=2):
+        self.set_url(False)
+        if "keys" in self.query.q['where']:
+            return await self.__then(self.query.compile())
+        else:
+            response = await self.find_all_query(page_size=page_size, max_in_parallel=max_in_parallel)
+            self.where_with_keys([result["_KEY"] for resp in response for result in resp["results"]])
+            return await self.__then(self.query.compile())
+
+
 
     async def gather_with_concurrency(self, n, *tasks):
         semaphore = asyncio.Semaphore(n)
@@ -240,12 +251,6 @@ class Find:
             query_aux = copy.deepcopy(query_compiled)
             query_aux['page'] = (i + 1)
             queries.append(self.__then(query_aux))
-        # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
-        # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
-        # data = []
-        # for i in range(len(results)):
-        #     for j in range(len(results[i])):
-        #         data.extend(results[i][j])
         data = []
         results = await  self.gather_with_concurrency(max_in_parallel, *queries)
         for i in range(len(results)):
