@@ -665,25 +665,31 @@ class WorkflowQuery:
         responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
         return responses
 
-    async def then(self, params):
+    async def then(self, params, method="get"):
         async with aiohttp.ClientSession() as session:
+            if method == "post":
+                async with session.post(
+                        self.sbx_workflow.p(self.url), json=params,
+                        headers=self.sbx_workflow.get_headers_json()) as resp:
+                    return await resp.json()
+
             async with session.get(
                     self.sbx_workflow.p(self.url), params=params,
                     headers=self.sbx_workflow.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def find_all(self, params, page_size=1000, max_in_parallel=2):
+    async def find_all(self, params, page_size=1000, max_in_parallel=2, method="get"):
 
         params['size'] = page_size
         params['page'] = 0
         queries = []
         data = []
-        temp = await self.then(params)
+        temp = await self.then(params, method)
         total_pages = math.ceil(temp['totalCount']/page_size)
         for i in range(total_pages):
             params_aux = copy.deepcopy(params)
             params_aux['page'] = i
-            queries.append(self.then(params_aux))
+            queries.append(self.then(params_aux, method))
         if len(queries) > 0:
             # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
             # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
