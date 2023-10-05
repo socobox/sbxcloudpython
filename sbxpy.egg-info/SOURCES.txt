@@ -3,6 +3,10 @@ README.md
 setup.py
 sbxpy/QueryBuilder.py
 sbxpy/__init__.py
+sbxpy/cache/__init__.py
+sbxpy/domain/__init__.py
+sbxpy/sbx/__init__.py
+sbxpy/service/__init__.py
 sbxpy.egg-info/PKG-INFO
 sbxpy.egg-info/SOURCES.txt
 sbxpy.egg-info/dependency_links.txt
