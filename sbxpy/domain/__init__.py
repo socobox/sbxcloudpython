@@ -29,3 +29,11 @@ class SBXModel(BaseModel):
     @classmethod
     def get_model(cls):
         return cls._model
+
+    def __hash__(self):
+        return hash(self.key) if self.key is not None else id(self)
+
+    def __eq__(self, other):
+        if isinstance(other, SBXModel):
+            return self.key == other.key if self.key is not None else self is other
+        return NotImplemented
