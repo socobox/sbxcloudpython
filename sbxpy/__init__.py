@@ -356,7 +356,7 @@ class SbxCore:
         'row': '/data/v1/row',
         'find': '/data/v1/row/find',
         'update': '/data/v1/row/update',
-        'delete': '/data/v1/row/',
+        'delete': '/data/v1/row/delete',
         'downloadFile': '/content/v1/download',
         'uploadFile': '/content/v1/upload',
         'addFolder': '/content/v1/folder',
@@ -367,7 +367,8 @@ class SbxCore:
         'payment_token': '/payment/v1/token',
         'password': '/user/v1/password/request',
         'cloudscript_run': '/cloudscript/v1/run',
-        'domain': '/data/v1/row/model/list'
+        'domain': '/data/v1/row/model/list',
+        'config': '/domain/v1/list/app'
     }
 
     def __init__(self, manage_loop=False):
@@ -416,10 +417,10 @@ class SbxCore:
         sw = False
         if isinstance(data, list):
             for item in data:
-                if "_KEY" in item:
+                if "_KEY" in item and item["_KEY"] is not None:
                     sw = True
         else:
-            if "_KEY" in data:
+            if "_KEY" in data and data["_KEY"] is not None:
                 sw = True
         return sw
 
@@ -451,6 +452,11 @@ class SbxCore:
         async with aiohttp.ClientSession() as session:
             params = {'domain':  self.environment['domain']}
             async with session.get(self.p(self.urls['domain']), params=params, headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def get_config(self):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.p(self.urls['config']), params={}, headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
     async def run(self, key, params, url=None):
