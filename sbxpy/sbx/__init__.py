@@ -51,7 +51,7 @@ class SBX:
             cls._instance = Sc()
             token = os.environ.get("SBX_TOKEN")
             app_key = os.environ.get("SBX_APP_KEY")
-            cls._instance.initialize(129, app_key, "https://sbxcloud.com/api")
+            cls._instance.initialize(os.environ.get("SBX_DOMAIN"), app_key, os.environ.get("SBX_HOST"))
             if not all([token, app_key]):
                 raise Exception(
                     "SBX_TOKEN and SBX_APP_KEY must be provided as environment variables"

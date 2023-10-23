@@ -240,6 +240,21 @@ class Find:
     def find_callback(self, callback):
         self.sbx_core.make_callback(self.find(), callback)
 
+    def merge_results(self, results):
+        total_res = {
+            "success": True,
+            "results": [],
+            "fetched_results": {},
+        }
+        for res in results:
+            total_res["results"] =  total_res["results"] + res["results"]
+            if "fetched_results" in res:
+                for k,v in res["fetched_results"].items():
+                    if k not in total_res["fetched_results"]:
+                        total_res["fetched_results"][k] = {}
+                    total_res["fetched_results"][k].update(v)
+        return total_res
+
     async def find_all_query(self, page_size=1000, max_in_parallel=2):
         self.set_page_size(page_size)
         self.set_url(True)
@@ -256,6 +271,9 @@ class Find:
         for i in range(len(results)):
             data.append(results[i])
         return data
+
+    async def find_all(self, page_size=1000, max_in_parallel=2):
+        return self.merge_results(await self.find_all_query(page_size, max_in_parallel))
 
     def find_all_callback(self, callback):
         self.sbx_core.make_callback(self.find_all_query(), callback)

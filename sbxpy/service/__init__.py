@@ -83,5 +83,5 @@ class SBXCachedService(SBXService):
 
         except Exception as e:
             logger.exception(f"An error occurred while retrieving data: {e}")
-        finally:
-            await redis_service.close_connection()  # If applicable.
+        # finally:
+        #     await redis_service.close_connection()  # If applicable.
