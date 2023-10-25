@@ -45,8 +45,8 @@ class SBXCachedService(SBXService):
 
         except Exception as e:
             logger.exception(f"An error occurred while retrieving data: {e}")
-        finally:
-            await redis_service.close_connection()  # If applicable.
+        # finally:
+        #     await redis_service.close_connection()  # If applicable.
 
     @staticmethod
     async def list(
@@ -65,7 +65,7 @@ class SBXCachedService(SBXService):
                     if model_instances:
                         return model_instances
 
-            query = SBXCachedService.find(CachedType.get_model())
+            query = SBXCachedService.find(result_type.get_model())
             model_instances = SBXResponse(**await query.find()).all(result_type)
 
             if model_instances:
