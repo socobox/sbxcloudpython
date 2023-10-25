@@ -17,13 +17,18 @@ class SBXCachedService(SBXService):
     async def get(
         key: str, result_type: Type[CachedType], use_cache=True
     ) -> Optional[CachedType]:
+        if not issubclass(result_type, SBXModel) or result_type.get_model() is None:
+            logger.error(f"type of {type(result_type)} is not a subclass of SBXModel")
+            raise ValueError("result_type must be a subclass of SBXModel")
+
         try:
+            keys_idx = f"{result_type.get_model()}:*"
             await redis_service.get_connection()
             cached_keys: Set[str] = set(
-                await redis_service.get_keys_index(f"{result_type.get_model()}:*") or []
+                await redis_service.get_keys_index(keys_idx) or []
             )
 
-            cache_key = f"{result_type.get_model()}:{key}"
+            cache_key = f"sbx:{result_type.get_model()}:{key}"
 
             if use_cache and key in cached_keys:
                 model_instance = await redis_service.get_object(cache_key, result_type)
@@ -52,6 +57,12 @@ class SBXCachedService(SBXService):
     async def list(
         result_type: Type[CachedType], use_cache=True
     ) -> Optional[List[CachedType]]:
+        if not issubclass(result_type, SBXModel):
+            logger.error(f"type of {type(result_type)} is not a subclass of SBXModel")
+            raise ValueError("result_type must be a subclass of SBXModel")
+
+        logger.debug(f"Retrieving list of {result_type}")
+
         try:
             keys_idx = f"{result_type.get_model()}:*"
             if use_cache:
@@ -60,7 +71,10 @@ class SBXCachedService(SBXService):
                 )
                 if len(cache_keys) > 0:
                     model_instances = await redis_service.mget_objects(
-                        list(cache_keys), result_type
+                        list(
+                            [f"sbx:{result_type.get_model()}:{k}" for k in cache_keys]
+                        ),
+                        result_type,
                     )
                     if model_instances:
                         return model_instances
@@ -70,7 +84,7 @@ class SBXCachedService(SBXService):
 
             if model_instances:
                 model_map = {
-                    f"{result_type.get_model()}:{instance.key}": instance
+                    f"sbx:{result_type.get_model()}:{instance.key}": instance
                     for instance in model_instances
                 }
                 # save the items in cache
