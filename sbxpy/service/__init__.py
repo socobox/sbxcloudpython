@@ -80,7 +80,10 @@ class SBXCachedService(SBXService):
                         return model_instances
 
             query = SBXCachedService.find(result_type.get_model())
-            model_instances = SBXResponse(**await query.find()).all(result_type)
+
+            all_data = await query.find_all_query()
+
+            model_instances = SBXResponse(**query.merge_results(all_data)).all(result_type)
 
             if model_instances:
                 model_map = {
