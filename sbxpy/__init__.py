@@ -247,12 +247,17 @@ class Find:
             "fetched_results": {},
         }
         for res in results:
-            total_res["results"] =  total_res["results"] + res["results"]
-            if "fetched_results" in res:
-                for k,v in res["fetched_results"].items():
-                    if k not in total_res["fetched_results"]:
-                        total_res["fetched_results"][k] = {}
-                    total_res["fetched_results"][k].update(v)
+            if results["success"]:
+                total_res["results"] =  total_res["results"] + res["results"]
+                if "fetched_results" in res:
+                    for k,v in res["fetched_results"].items():
+                        if k not in total_res["fetched_results"]:
+                            total_res["fetched_results"][k] = {}
+                        total_res["fetched_results"][k].update(v)
+            else:
+                total_res["success"] = False
+                total_res["message"] = res["message"]
+                break
         return total_res
 
     async def find_all_query(self, page_size=1000, max_in_parallel=2):
@@ -261,16 +266,19 @@ class Find:
         queries = []
         query_compiled = self.query.compile()
         data = await self.__then(query_compiled)
-        total_pages = data['total_pages']
-        for i in range(total_pages+1):
-            query_aux = copy.deepcopy(query_compiled)
-            query_aux['page'] = (i + 1)
-            queries.append(self.__then(query_aux))
-        data = []
-        results = await  self.gather_with_concurrency(max_in_parallel, *queries)
-        for i in range(len(results)):
-            data.append(results[i])
-        return data
+        if data["success"]:
+            total_pages = data['total_pages']
+            for i in range(total_pages+1):
+                query_aux = copy.deepcopy(query_compiled)
+                query_aux['page'] = (i + 1)
+                queries.append(self.__then(query_aux))
+            data = []
+            results = await  self.gather_with_concurrency(max_in_parallel, *queries)
+            for i in range(len(results)):
+                data.append(results[i])
+            return data
+        else:
+            return data
 
     async def find_all(self, page_size=1000, max_in_parallel=2):
         return self.merge_results(await self.find_all_query(page_size, max_in_parallel))
