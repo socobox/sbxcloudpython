@@ -262,23 +262,24 @@ class Find:
 
     async def find_all_query(self, page_size=1000, max_in_parallel=2):
         self.set_page_size(page_size)
+        self.set_page(1)
         self.set_url(True)
         queries = []
         query_compiled = self.query.compile()
         data = await self.__then(query_compiled)
+        all_data = [data]
         if data["success"]:
             total_pages = data['total_pages']
-            for i in range(total_pages+1):
+            for i in range(1, total_pages):
                 query_aux = copy.deepcopy(query_compiled)
                 query_aux['page'] = (i + 1)
                 queries.append(self.__then(query_aux))
-            data = []
+
             results = await  self.gather_with_concurrency(max_in_parallel, *queries)
             for i in range(len(results)):
-                data.append(results[i])
-            return data
-        else:
-            return data
+                all_data.append(results[i])
+        return all_data
+
 
     async def find_all(self, page_size=1000, max_in_parallel=2):
         return self.merge_results(await self.find_all_query(page_size, max_in_parallel))
