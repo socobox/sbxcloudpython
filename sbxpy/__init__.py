@@ -247,7 +247,7 @@ class Find:
             "fetched_results": {},
         }
         for res in results:
-            if results["success"]:
+            if res["success"]:
                 total_res["results"] =  total_res["results"] + res["results"]
                 if "fetched_results" in res:
                     for k,v in res["fetched_results"].items():
