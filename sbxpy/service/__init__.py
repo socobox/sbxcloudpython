@@ -76,14 +76,22 @@ class SBXCachedService(SBXService):
                         ),
                         result_type,
                     )
-                    if model_instances:
+                    model_instances = [
+                        model_instance
+                        for model_instance in model_instances
+                        if model_instance is not None
+                    ]
+
+                    if model_instances and len(model_instances) == len(cache_keys):
                         return model_instances
 
             query = SBXCachedService.find(result_type.get_model())
 
             all_data = await query.find_all_query()
 
-            model_instances = SBXResponse(**query.merge_results(all_data)).all(result_type)
+            model_instances = SBXResponse(**query.merge_results(all_data)).all(
+                result_type
+            )
 
             if model_instances:
                 model_map = {
