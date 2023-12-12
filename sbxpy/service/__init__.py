@@ -20,21 +20,24 @@ class SBXCachedService(SBXService):
         if not issubclass(result_type, SBXModel) or result_type.get_model() is None:
             logger.error(f"type of {type(result_type)} is not a subclass of SBXModel")
             raise ValueError("result_type must be a subclass of SBXModel")
-
+        keys_idx = f"{result_type.get_model()}:*"
+        cache_key = f"sbx:{result_type.get_model()}:{key}"
+        cached_keys: Set[str] = set()
+        model_instance = None
         try:
-            keys_idx = f"{result_type.get_model()}:*"
+
             await redis_service.get_connection()
             cached_keys: Set[str] = set(
                 await redis_service.get_keys_index(keys_idx) or []
             )
-
-            cache_key = f"sbx:{result_type.get_model()}:{key}"
-
             if use_cache and key in cached_keys:
                 model_instance = await redis_service.get_object(cache_key, result_type)
                 if model_instance:
                     return model_instance
+        except Exception as e:
+            logger.exception(f"An error occurred while retrieving data: {e}")
 
+        try:
             query = SBXCachedService.find(result_type.get_model())
             query.where_with_keys([key])
             model_instance = SBXResponse(**await query.find()).first(result_type)
@@ -47,9 +50,10 @@ class SBXCachedService(SBXService):
                 )
 
             return model_instance
-
         except Exception as e:
             logger.exception(f"An error occurred while retrieving data: {e}")
+            return model_instance
+
         # finally:
         #     await redis_service.close_connection()  # If applicable.
 
@@ -62,9 +66,10 @@ class SBXCachedService(SBXService):
             raise ValueError("result_type must be a subclass of SBXModel")
 
         logger.debug(f"Retrieving list of {result_type}")
-
+        keys_idx = f"{result_type.get_model()}:*"
+        model_instances = None
         try:
-            keys_idx = f"{result_type.get_model()}:*"
+
             if use_cache:
                 cache_keys: Set[str] = set(
                     await redis_service.get_keys_index(keys_idx) or []
@@ -84,7 +89,9 @@ class SBXCachedService(SBXService):
 
                     if model_instances and len(model_instances) == len(cache_keys):
                         return model_instances
-
+        except Exception as e:
+            logger.exception(f"An error occurred while retrieving data: {e}")
+        try:
             query = SBXCachedService.find(result_type.get_model())
 
             all_data = await query.find_all_query()
@@ -108,5 +115,6 @@ class SBXCachedService(SBXService):
 
         except Exception as e:
             logger.exception(f"An error occurred while retrieving data: {e}")
+            return model_instances
         # finally:
         #     await redis_service.close_connection()  # If applicable.
