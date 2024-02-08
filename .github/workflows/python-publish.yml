@@ -26,6 +26,8 @@ jobs:
       id-token: write
     steps:
       # retrieve your distributions here
+      - name: Build binary wheel and a source tarball
+        run: python setup.py sdist
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
