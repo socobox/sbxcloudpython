@@ -555,6 +555,21 @@ class EventQuery:
                     headers=self.sbx_event.get_headers_json()) as resp:
                 return await resp.json()
 
+    async def then_v2(self, params, body):
+        timeout = aiohttp.ClientTimeout(total=10 * 60, connect=None,
+                                        sock_connect=None, sock_read=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            if body is None:
+                async with session.get(
+                        self.sbx_event.p(self.url), params=params,
+                        headers=self.sbx_event.get_headers_json()) as resp:
+                    return await resp.json()
+            else:
+                async with session.post(
+                        self.sbx_event.p(self.url), params=params, json=body,
+                        headers=self.sbx_event.get_headers_json()) as resp:
+                    return await resp.json()
+
     def __chunk_it(self, seq, num):
         avg = len(seq) / float(num)
         out = []
@@ -574,6 +589,7 @@ class EventQuery:
 
         responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
         return responses
+
     async def get_all(self, params, division, max_in_parallel=2):
         tempParams = { "toDate":   params["toDate"], "fromDate": params["fromDate"]}
         queries = []
@@ -598,6 +614,50 @@ class EventQuery:
             tempParams["toDate"] = dates[i+1]
             queries.append(self.then(tempParams))
             tempParams = copy.copy(tempParams)
+
+        # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
+        # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
+        # data = []
+        # for i in range(len(results)):
+        #     for j in range(len(results[i])):
+        #         if "items" in results[i][j]:
+        #             data.extend(results[i][j]["items"])
+        data = []
+        results = await self.gather_with_concurrency(max_in_parallel, *queries)
+        for i in range(len(results)):
+            if "items" in results[i]:
+                data.extend(results[i]["items"])
+
+        return {"items": data}
+
+
+    async def get_all_v2(self, params, body, division, max_in_parallel=2):
+        if body is None:
+            return await self.get_all(params,division,max_in_parallel)
+
+        body_temp = copy.copy(body)
+        queries = []
+
+        N = division
+        test_date1 = datetime.datetime.fromisoformat(body_temp["from_date"][:-1])
+        test_date2 = datetime.datetime.fromisoformat(body_temp["to_date"][:-1])
+        temp = []
+
+        diff = (test_date2 - test_date1) // N
+        for idx in range(0, N+1):
+            temp.append((test_date1 + idx * diff))
+
+        dates = []
+        for sub in temp:
+            dates.append(sub.strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+
+        print(N)
+        print(dates)
+        for i in range(len(dates)-1):
+            body_temp["from_date"] = dates[i]
+            body_temp["to_date"] = dates[i+1]
+            queries.append(self.then_v2(params, body_temp))
+            body_temp = copy.copy(body_temp)
 
         # futures = self.__chunk_it(queries, min(max_in_parallel, len(queries)))
         # results = await asyncio.gather(*[futures[i] for i in range(len(futures))])
