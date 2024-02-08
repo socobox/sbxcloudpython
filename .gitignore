@@ -41,5 +41,3 @@ tmtagsHistory
 .bundle
 
 condalibrary/*
-build/*
-SbxPy.egg-info/*
