@@ -1,6 +1,6 @@
 package:
   name: "sbxpy"
-  version: "0.6.2"
+  version: "0.6.3"
 
 source:
   git_url: "https://github.com/socobox/sbxcloudpython.git"
