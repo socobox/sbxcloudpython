@@ -15,7 +15,7 @@ CachedType = TypeVar("CachedType", bound=SBXModel)
 class SBXCachedService(SBXService):
     @staticmethod
     async def get(
-        key: str, result_type: Type[CachedType], use_cache=True
+        key: str, result_type: Type[CachedType], use_cache=True, ex: Optional[int] = None
     ) -> Optional[CachedType]:
         if not issubclass(result_type, SBXModel) or result_type.get_model() is None:
             logger.error(f"type of {type(result_type)} is not a subclass of SBXModel")
@@ -43,10 +43,10 @@ class SBXCachedService(SBXService):
             model_instance = SBXResponse(**await query.find()).first(result_type)
 
             if model_instance:
-                await redis_service.set_object(cache_key, model_instance)
+                await redis_service.set_object(cache_key, model_instance, ex)
                 cached_keys.add(key)
                 await redis_service.set_keys_index(
-                    f"{result_type.get_model()}:*", list(cached_keys)
+                    f"{result_type.get_model()}:*", list(cached_keys), ex
                 )
 
             return model_instance
@@ -59,7 +59,7 @@ class SBXCachedService(SBXService):
 
     @staticmethod
     async def list(
-        result_type: Type[CachedType], use_cache=True
+        result_type: Type[CachedType], use_cache=True, ex: Optional[int] = None
     ) -> Optional[List[CachedType]]:
         if not issubclass(result_type, SBXModel):
             logger.error(f"type of {type(result_type)} is not a subclass of SBXModel")
@@ -106,10 +106,10 @@ class SBXCachedService(SBXService):
                     for instance in model_instances
                 }
                 # save the items in cache
-                await redis_service.mset_objects(model_map)
+                await redis_service.mset_objects(model_map, ex)
                 # update the index
                 cache_keys = {instance.key for instance in model_instances}
-                await redis_service.set_keys_index(keys_idx, list(cache_keys))
+                await redis_service.set_keys_index(keys_idx, list(cache_keys), ex)
 
             return model_instances
 

@@ -79,16 +79,23 @@ class RedisService:
             return result_type(**result)
         return None
 
-    async def set_object(self, key: str, value: CachedType) -> None:
+    async def set_object(self, key: str, value: CachedType, ex: Optional[int] = None) -> None:
         await self.get_connection()
         value_as_json = value.model_dump_json()
-        await self._redis.set(key, value_as_json)
+        if ex is None:
+            await self._redis.set(key, value_as_json)
+        else:
+            await self._redis.set(key, value_as_json, ex=ex)
 
-    async def mset_objects(self, items: Dict[str, CachedType]) -> None:
+    async def mset_objects(self, items: Dict[str, CachedType], ex: Optional[int] = None) -> None:
         await self.get_connection()
         # map as set of key, item
         items_as_json = {key: item.model_dump_json() for key, item in items.items()}
-        await self._redis.mset(items_as_json)
+        if ex is None:
+            await self._redis.mset(items_as_json)
+        else:
+            for key, item in items.items():
+                await self._redis.set(key, item.model_dump_json(), ex=ex)
 
     async def mget_objects(
         self, keys: List[str], result_type: Type[CachedType]
@@ -102,12 +109,15 @@ class RedisService:
         tmp_json = data.model_dump_json()
         await self._redis.rpush(queue_name, tmp_json)
 
-    async def set_keys_index(self, index_key: str, keys: List[str]) -> None:
+    async def set_keys_index(self, index_key: str, keys: List[str], ex: Optional[int] = None) -> None:
         """Store a list of keys as index"""
         await self.get_connection()
         # Convert set of keys to string before storing
         keys_as_str = json.dumps(keys)
-        await self._redis.set(index_key, keys_as_str)
+        if ex is None:
+            await self._redis.set(index_key, keys_as_str)
+        else:
+            await self._redis.set(index_key, keys_as_str, ex=ex)
 
     async def get_keys_index(self, index_key: str) -> List[str]:
         """Retrieve a list of keys from index"""
