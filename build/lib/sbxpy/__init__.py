@@ -776,10 +776,11 @@ class WorkflowQuery:
         params['size'] = page_size
         params['page'] = 0
         queries = []
-        data = []
+
         temp = await self.then(params, method)
         total_pages = math.ceil(temp['totalCount']/page_size)
-        for i in range(total_pages):
+        data = [temp]
+        for i in range(1, total_pages):
             params_aux = copy.deepcopy(params)
             params_aux['page'] = i
             queries.append(self.then(params_aux, method))
@@ -792,8 +793,6 @@ class WorkflowQuery:
             results = await  self.gather_with_concurrency(max_in_parallel, *queries)
             for i in range(len(results)):
                 data.append(results[i])
-        else:
-            data.append(temp)
         return data
 
 
