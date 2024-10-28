@@ -759,7 +759,9 @@ class WorkflowQuery:
         return responses
 
     async def then(self, params, method="get"):
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=10 * 60, connect=None,
+                                        sock_connect=None, sock_read=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             if method == "post":
                 async with session.post(
                         self.sbx_workflow.p(self.url), json=params,
