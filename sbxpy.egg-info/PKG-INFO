@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: sbxpy
-Version: 0.6.4
+Version: 0.6.7
 Summary: This is the module  create all request used to communicate with SbxCloud
 Home-page: https://github.com/sbxcloud/sbxcloudpython
 Author: Luis Guzmán
