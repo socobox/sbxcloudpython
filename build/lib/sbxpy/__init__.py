@@ -92,6 +92,11 @@ class Find:
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value + '%')
         return self
 
+    def and_where_not_contains(self, field, value):
+        self.lastANDOR = 'AND'
+        self.query.add_condition(self.lastANDOR, field, 'NOT LIKE', '%' + value + '%')
+        return self
+
     def and_where_in(self, field, value):
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'IN', value)
@@ -155,6 +160,11 @@ class Find:
     def or_where_contains(self, field, value):
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value + '%')
+        return self
+
+    def or_where_not_contains(self, field, value):
+        self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
+        self.query.add_condition(self.lastANDOR, field, 'NOT LIKE', '%' + value + '%')
         return self
 
     def or_where_in(self, field, value):

@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: sbxpy
 Version: 0.6.8
 Summary: This is the module  create all request used to communicate with SbxCloud
@@ -10,5 +10,17 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: aiohttp>=3.7.3
+Requires-Dist: redis>=4.5.2
+Requires-Dist: pydantic>2.1.0
+Requires-Dist: deepmerge>=1.1.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: summary
 
 This is the module  create all request used to communicate with SbxCloud

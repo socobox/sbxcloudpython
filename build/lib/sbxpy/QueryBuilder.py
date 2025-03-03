@@ -12,7 +12,7 @@ class QueryBuilder:
             "GROUP": []
         }
         self.OP = ["in", "IN", "not in", "NOT IN", "is", "IS", "is not", "IS NOT", "<>", "!=", "=", "<", "<=", ">=", ">",
-              "like", "LIKE"]
+              "like", "LIKE", "not like", "NOT LIKE"]
 
     def set_domain(self, domain_id):
         self.q['domain'] = domain_id
