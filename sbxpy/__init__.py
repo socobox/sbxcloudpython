@@ -5,6 +5,7 @@ import copy
 import math
 from threading import Thread
 import datetime
+from typing import Dict, List, Any, Union, Optional, Callable, Awaitable, TypeVar, cast
 
 '''
 :mod:`sbxpy` -- Main Library
@@ -15,203 +16,207 @@ import datetime
 .. moduleauthor:: Luis Guzman <lgguzman890414@gmail.com>  
 '''
 
+# Type aliases for better readability
+JSON = Dict[str, Any]
+T = TypeVar('T')
+
 
 class Find:
 
-    def __init__(self, model, sbx_core):
+    def __init__(self, model: str, sbx_core: 'SbxCore') -> None:
         self.query = Qb().set_domain(sbx_core.environment['domain']).set_model(model)
-        self.lastANDOR = None
+        self.lastANDOR: Optional[str] = None
         self.sbx_core = sbx_core
-        self.url = self.sbx_core.urls['find']
+        self.url: str = self.sbx_core.urls['find']
 
-    def compile(self):
+    def compile(self) -> JSON:
         return self.query.compile()
 
-    def new_group_with_and(self):
+    def new_group_with_and(self) -> 'Find':
         self.query.new_group('AND')
         self.lastANDOR = None
         return self
 
-    def new_group_with_or(self):
+    def new_group_with_or(self) -> 'Find':
         self.query.new_group('OR')
         self.lastANDOR = None
         return self
 
-    def and_where_is_equal(self, field, value):
+    def and_where_is_equal(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '=', value)
         return self
 
-    def and_where_is_not_null(self, field):
+    def and_where_is_not_null(self, field: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'IS NOT', None)
         return self
 
-    def and_where_is_null(self, field):
+    def and_where_is_null(self, field: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'IS', None)
         return self
 
-    def and_where_greater_than(self, field, value):
+    def and_where_greater_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '>', value)
         return self
 
-    def and_where_less_than(self, field, value):
+    def and_where_less_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '<', value)
         return self
 
-    def and_where_greater_or_equal_than(self, field, value):
+    def and_where_greater_or_equal_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '>=', value)
         return self
 
-    def and_where_less_or_equal_than(self, field, value):
+    def and_where_less_or_equal_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '<=', value)
         return self
 
-    def and_where_is_not_equal(self, field, value):
+    def and_where_is_not_equal(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, '!=', value)
         return self
 
-    def and_where_starts_with(self, field, value):
+    def and_where_starts_with(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value)
         return self
 
-    def and_where_ends_with(self, field, value):
+    def and_where_ends_with(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', value + '%')
         return self
 
-    def and_where_contains(self, field, value):
+    def and_where_contains(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value + '%')
         return self
 
-    def and_where_not_contains(self, field, value):
+    def and_where_not_contains(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'NOT LIKE', '%' + value + '%')
         return self
 
-    def and_where_in(self, field, value):
+    def and_where_in(self, field: str, value: List[Any]) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'IN', value)
         return self
 
-    def and_where_not_in(self, field, value):
+    def and_where_not_in(self, field: str, value: List[Any]) -> 'Find':
         self.lastANDOR = 'AND'
         self.query.add_condition(self.lastANDOR, field, 'NOT IN', value)
         return self
 
-    def or_where_is_equal(self, field, value):
+    def or_where_is_equal(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '=', value)
         return self
 
-    def or_where_is_not_null(self, field):
+    def or_where_is_not_null(self, field: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'IS NOT', None)
         return self
 
-    def or_where_is_null(self, field):
+    def or_where_is_null(self, field: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'IS', None)
         return self
 
-    def or_where_greater_than(self, field, value):
+    def or_where_greater_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '>', value)
         return self
 
-    def or_where_less_than(self, field, value):
+    def or_where_less_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '<', value)
         return self
 
-    def or_where_greater_or_equal_than(self, field, value):
+    def or_where_greater_or_equal_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '>=', value)
         return self
 
-    def or_where_less_or_equal_than(self, field, value):
+    def or_where_less_or_equal_than(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '<=', value)
         return self
 
-    def or_where_is_not_equal(self, field, value):
+    def or_where_is_not_equal(self, field: str, value: Any) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, '!=', value)
         return self
 
-    def or_where_starts_with(self, field, value):
+    def or_where_starts_with(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value)
         return self
 
-    def or_where_ends_with(self, field, value):
+    def or_where_ends_with(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', value + '%')
         return self
 
-    def or_where_contains(self, field, value):
+    def or_where_contains(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'LIKE', '%' + value + '%')
         return self
 
-    def or_where_not_contains(self, field, value):
+    def or_where_not_contains(self, field: str, value: str) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'NOT LIKE', '%' + value + '%')
         return self
 
-    def or_where_in(self, field, value):
+    def or_where_in(self, field: str, value: List[Any]) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'IN', value)
         return self
 
-    def or_where_not_in(self, field, value):
+    def or_where_not_in(self, field: str, value: List[Any]) -> 'Find':
         self.lastANDOR = 'AND' if (self.lastANDOR is None) else 'OR'
         self.query.add_condition(self.lastANDOR, field, 'NOT IN', value)
         return self
 
-    def or_where_reference_join_between(self, field, reference_field):
+    def or_where_reference_join_between(self, field: str, reference_field: str) -> 'ReferenceJoin':
         return ReferenceJoin(self, field, reference_field, 'OR')
 
-    def and_where_reference_join_between(self, field, reference_field):
+    def and_where_reference_join_between(self, field: str, reference_field: str) -> 'ReferenceJoin':
         return ReferenceJoin(self, field, reference_field, 'AND')
 
-    def where_with_keys(self, keys):
+    def where_with_keys(self, keys: List[str]) -> 'Find':
         self.query.where_with_keys(keys)
         return self
 
-    def order_by(self, field, asc):
+    def order_by(self, field: str, asc: Optional[bool] = None) -> 'Find':
         self.query.order_by(field, asc)
         return self
 
-    def fetch_models(self, array):
+    def fetch_models(self, array: List[str]) -> 'Find':
         self.query.fetch_models(array)
         return self
 
-    def reverse_fetch(self, array):
+    def reverse_fetch(self, array: List[str]) -> 'Find':
         self.query.reverse_fetch(array)
         return self
 
-    def set_page(self, page):
+    def set_page(self, page: int) -> 'Find':
         self.query.set_page(page)
         return self
 
-    def set_page_size(self, size):
+    def set_page_size(self, size: int) -> 'Find':
         self.query.set_page_size(size)
         return self
 
-    async def __then(self, query_compiled):
+    async def __then(self, query_compiled: JSON) -> JSON:
         timeout = aiohttp.ClientTimeout(total=10*60, connect=None,
                       sock_connect=None, sock_read=None)
         print("sent")
-        async with aiohttp.ClientSession( timeout=timeout) as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
                     self.sbx_core.p(self.url), json=query_compiled,
                     headers=self.sbx_core.get_headers_json()) as resp:
@@ -219,14 +224,14 @@ class Find:
                 print("response")
                 return r
 
-    def set_url(self, is_find):
+    def set_url(self, is_find: bool) -> None:
         self.url = self.sbx_core.urls['find'] if is_find else self.sbx_core.urls['delete']
 
-    async def find(self):
+    async def find(self) -> JSON:
         self.set_url(True)
         return await self.__then(self.query.compile())
 
-    async def delete(self, page_size=1000, max_in_parallel=2):
+    async def delete(self, page_size: int = 1000, max_in_parallel: int = 2) -> JSON:
         self.set_url(False)
         if "keys" in self.query.q['where']:
             return await self.__then(self.query.compile())
@@ -237,28 +242,28 @@ class Find:
 
 
 
-    async def gather_with_concurrency(self, n, *tasks):
+    async def gather_with_concurrency(self, n: int, *tasks: Awaitable[T]) -> List[T]:
         semaphore = asyncio.Semaphore(n)
 
-        async def sem_task(task):
+        async def sem_task(task: Awaitable[T]) -> T:
             async with semaphore:
                 return await task
 
-        responses = await  asyncio.gather(*(sem_task(task) for task in tasks))
+        responses = await asyncio.gather(*(sem_task(task) for task in tasks))
         return responses
 
-    def find_callback(self, callback):
+    def find_callback(self, callback: Callable[[Exception, JSON], None]) -> None:
         self.sbx_core.make_callback(self.find(), callback)
 
-    def merge_results(self, results):
-        total_res = {
+    def merge_results(self, results: List[JSON]) -> JSON:
+        total_res: JSON = {
             "success": True,
             "results": [],
             "fetched_results": {},
         }
         for res in results:
             if res["success"]:
-                total_res["results"] =  total_res["results"] + res["results"]
+                total_res["results"] = total_res["results"] + res["results"]
                 if "fetched_results" in res:
                     for k,v in res["fetched_results"].items():
                         if k not in total_res["fetched_results"]:
@@ -270,14 +275,14 @@ class Find:
                 break
         return total_res
 
-    async def find_all_query(self, page_size=1000, max_in_parallel=2):
+    async def find_all_query(self, page_size: int = 1000, max_in_parallel: int = 2) -> List[JSON]:
         self.set_page_size(page_size)
         self.set_page(1)
         self.set_url(True)
-        queries = []
+        queries: List[Awaitable[JSON]] = []
         query_compiled = self.query.compile()
         data = await self.__then(query_compiled)
-        all_data = [data]
+        all_data: List[JSON] = [data]
         if data["success"]:
             total_pages = data['total_pages']
             for i in range(1, total_pages):
@@ -285,21 +290,21 @@ class Find:
                 query_aux['page'] = (i + 1)
                 queries.append(self.__then(query_aux))
 
-            results = await  self.gather_with_concurrency(max_in_parallel, *queries)
+            results = await self.gather_with_concurrency(max_in_parallel, *queries)
             for i in range(len(results)):
                 all_data.append(results[i])
         return all_data
 
 
-    async def find_all(self, page_size=1000, max_in_parallel=2):
+    async def find_all(self, page_size: int = 1000, max_in_parallel: int = 2) -> JSON:
         return self.merge_results(await self.find_all_query(page_size, max_in_parallel))
 
-    def find_all_callback(self, callback):
+    def find_all_callback(self, callback: Callable[[Exception, List[JSON]], None]) -> None:
         self.sbx_core.make_callback(self.find_all_query(), callback)
 
-    def __chunk_it(self, seq, num):
+    def __chunk_it(self, seq: List[Awaitable[T]], num: int) -> List[Awaitable[List[T]]]:
         avg = len(seq) / float(num)
-        out = []
+        out: List[Awaitable[List[T]]] = []
         last = 0.0
 
         while last < len(seq):
@@ -311,7 +316,7 @@ class Find:
 
 class ReferenceJoin:
 
-    def __init__(self, find, field, reference_field, types):
+    def __init__(self, find: 'Find', field: str, reference_field: str, types: str) -> None:
         self.find = find
         self.field = field
         self.reference_field = reference_field
@@ -320,60 +325,60 @@ class ReferenceJoin:
         else:
             self.find.or_where_in(self.field, '@reference_join@')
 
-    def in_model(self, reference_model):
+    def in_model(self, reference_model: str) -> 'FilterJoin':
         return FilterJoin(self.find, self.field, self.reference_field, reference_model)
 
 
 class FilterJoin:
 
-    def __init__(self, find, field, reference_field, reference_model):
+    def __init__(self, find: 'Find', field: str, reference_field: str, reference_model: str) -> None:
         self.find = find
         self.field = field
         self.reference_field = reference_field
         self.reference_model = reference_model
 
-    def filter_where_is_equal(self, value):
-        self.find.query.setReferenceJoin('=', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_is_equal(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('=', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_is_not_null(self, value):
-        self.find.query.setReferenceJoin('IS NOT', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_is_not_null(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('IS NOT', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_is_null(self, value):
-        self.find.query.setReferenceJoin('IS', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_is_null(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('IS', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_greater_than(self, value):
-        self.find.query.setReferenceJoin('>', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_greater_than(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('>', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_less_than(self, value):
-        self.find.query.setReferenceJoin('<', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_less_than(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('<', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_greater_or_equal_than(self, value):
-        self.find.query.setReferenceJoin('>=', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_greater_or_equal_than(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('>=', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_less_or_equal_than(self, value):
-        self.find.query.setReferenceJoin('<=', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_less_or_equal_than(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('<=', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_is_not_equal(self, value):
-        self.find.query.setReferenceJoin('!=', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_is_not_equal(self, value: Any) -> 'Find':
+        self.find.query.set_reference_join('!=', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_like(self, value):
-        self.find.query.setReferenceJoin('LIKE', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_like(self, value: str) -> 'Find':
+        self.find.query.set_reference_join('LIKE', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_in(self, value):
-        self.find.query.setReferenceJoin('IN', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_in(self, value: List[Any]) -> 'Find':
+        self.find.query.set_reference_join('IN', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
-    def filter_where_not_in(self, value):
-        self.find.query.setReferenceJoin('NOT IN', self.field, self.reference_field, self.reference_model, value)
+    def filter_where_not_in(self, value: List[Any]) -> 'Find':
+        self.find.query.set_reference_join('NOT IN', self.field, self.reference_field, self.reference_model, value)
         return self.find
 
 
@@ -383,9 +388,9 @@ class SbxCore:
         The concurrent task operates with asyncio
         The request operates with aiohttp
     '''
-    environment = {}
-    headers = {}
-    urls = {
+    environment: Dict[str, Any] = {}
+    headers: Dict[str, str] = {}
+    urls: Dict[str, str] = {
         'update_password': '/user/v1/password',
         'login': '/user/v1/login',
         'register': '/user/v1/register',
@@ -408,40 +413,41 @@ class SbxCore:
         'config': '/domain/v1/list/app'
     }
 
-    def __init__(self, manage_loop=False):
+    def __init__(self, manage_loop: bool = False) -> None:
         '''
         Create a instance of SbxCore.
         :param manage_loop: if the event loop is manage by the library
         '''
-        self.loop = None
-        self.t = None
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.t: Optional[Thread] = None
         if manage_loop:
-            def start_loop():
+            def start_loop() -> None:
                 print('loop started')
-                self.loop.run_forever()
+                if self.loop:
+                    self.loop.run_forever()
 
             self.loop = asyncio.new_event_loop()
             self.t = Thread(target=start_loop)
             self.t.start()
 
-    def get_headers_json(self):
+    def get_headers_json(self) -> Dict[str, str]:
         self.headers['Content-Type'] = 'application/json'
         return self.headers
 
-    def p(self, path):
+    def p(self, path: str) -> str:
         return self.environment['base_url'] + path
 
-    def initialize(self, domain, app_key, base_url):
+    def initialize(self, domain: str, app_key: str, base_url: str) -> 'SbxCore':
         self.environment['domain'] = domain
         self.environment['base_url'] = base_url
         self.environment['app_key'] = app_key
         self.headers['App-Key'] = app_key
         return self
 
-    def with_model(self, model):
+    def with_model(self, model: str) -> Find:
         return Find(model, self)
 
-    def query_builder_to_insert(self, data, let_null):
+    def query_builder_to_insert(self, data: Union[Dict[str, Any], List[Dict[str, Any]]], let_null: bool) -> Qb:
         query = Qb().set_domain(self.environment['domain'])
         if isinstance(data, list):
             for item in data:
@@ -450,7 +456,7 @@ class SbxCore:
             query.add_object(self.validate_data(data, let_null))
         return query
 
-    def is_update(self, data):
+    def is_update(self, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> bool:
         sw = False
         if isinstance(data, list):
             for item in data:
@@ -461,9 +467,9 @@ class SbxCore:
                 sw = True
         return sw
 
-    def validate_data(self, data, let_null):
+    def validate_data(self, data: Dict[str, Any], let_null: bool) -> Dict[str, Any]:
         listkeys = [key for key in data if let_null or data[key] is not None]
-        temp = {}
+        temp: Dict[str, Any] = {}
         for key in listkeys:
             if data[key] is not None and isinstance(data[key], dict) and '_KEY' in data[key]:
                 data[key] = data[key]['_KEY']
@@ -476,7 +482,7 @@ class SbxCore:
     ======================================
     '''
 
-    async def login(self, login, password, domain):
+    async def login(self, login: str, password: str, domain: str) -> JSON:
         async with aiohttp.ClientSession() as session:
             params = {'login': login, 'password': password, 'domain': domain}
             async with session.get(self.p(self.urls['login']), params=params, headers=self.get_headers_json()) as resp:
@@ -485,29 +491,29 @@ class SbxCore:
                     self.headers['Authorization'] = 'Bearer ' + data['token']
                 return data
 
-    async def list_domain(self):
+    async def list_domain(self) -> JSON:
         async with aiohttp.ClientSession() as session:
             params = {'domain':  self.environment['domain']}
             async with session.get(self.p(self.urls['domain']), params=params, headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def get_config(self):
+    async def get_config(self) -> JSON:
         async with aiohttp.ClientSession() as session:
             async with session.get(self.p(self.urls['config']), params={}, headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def run(self, key, params, url=None):
+    async def run(self, key: str, params: Dict[str, Any], url: Optional[str] = None) -> JSON:
         async with aiohttp.ClientSession() as session:
-            params = {'key': key, 'params': params}
-            async with session.post(self.p(self.urls['cloudscript_run'] if url is None else url), json=params,
+            request_params = {'key': key, 'params': params}
+            async with session.post(self.p(self.urls['cloudscript_run'] if url is None else url), json=request_params,
                                     headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
-    async def upsert(self, model, data, let_null=False):
+    async def upsert(self, model: str, data: Union[Dict[str, Any], List[Dict[str, Any]]], let_null: bool = False) -> JSON:
         query = self.query_builder_to_insert(data, let_null).set_model(model).compile()
         return await self.__then(query, self.is_update(data))
 
-    async def __then(self, query_compiled, update):
+    async def __then(self, query_compiled: JSON, update: bool) -> JSON:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                     self.p(self.urls['row'] if not update else self.urls['update']), json=query_compiled,
@@ -520,20 +526,21 @@ class SbxCore:
     ======================================
     '''
 
-    def loginCallback(self, login, password, domain, call):
+    def loginCallback(self, login: str, password: str, domain: str, call: Callable[[Exception, JSON], None]) -> None:
         self.make_callback(self.login(login, password, domain), call)
 
-    def upsertCallback(self, model, data, call, let_null=False):
+    def upsertCallback(self, model: str, data: Union[Dict[str, Any], List[Dict[str, Any]]], 
+                      call: Callable[[Exception, JSON], None], let_null: bool = False) -> None:
         self.make_callback(self.upsert(model, data, let_null), call)
 
-    def make_callback(self, coroutine, call):
+    def make_callback(self, coroutine: Awaitable[T], call: Callable[[Exception, T], None]) -> None:
         try:
             if self.loop is None:
                 raise Exception('SbxCore must initialize with manage_loop True')
             else:
                 # future = asyncio.ensure_future(
                 #    coroutine, loop=self.loop)
-                def callback(fut):
+                def callback(fut: asyncio.Future) -> None:
                     call(None, fut.result())
 
                 # future.add_done_callback(callback)
@@ -543,7 +550,7 @@ class SbxCore:
         except Exception as inst:
             call(inst, None)
 
-    def close_connection(self):
+    def close_connection(self) -> None:
         if self.loop is not None:
             if self.loop.is_running():
                 asyncio.gather(*asyncio.all_tasks()).cancel()
