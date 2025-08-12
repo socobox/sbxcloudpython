@@ -2,6 +2,7 @@ from sbxpy.QueryBuilder import QueryBuilder as Qb
 from sbxpy.__init__ import SbxCore as Sc
 import asyncio
 import os
+from dotenv import load_dotenv
 
 '''
 This is a test using the os environment:
@@ -9,6 +10,7 @@ credentials app: APP-KEY, DOMAIN
 credentials user: LOGIN, PASSWORD
 '''
 
+load_dotenv()
 async def main(sci):
 
     qb = Qb()
@@ -29,6 +31,19 @@ async def main(sci):
 #    domain = await sci.list_domain()
     sci.headers['Authorization'] = 'Bearer ' + os.environ['TOKEN']
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
+    
+
+    cleaned_data = [
+        {k: v for k, v in item.items() if not k.startswith('_META')}
+        for item in all_data["results"]
+    ]
+
+    print("\n=== Probando Funcion upsert ===\n")
+    #print("all data results:", all_data["results"])
+    print("prueba de datos:" ,all_data["results"][0])
+    resultado = await sci.upsert(os.environ["MODEL"],all_data["results"])
+    print("\nResultado de upsert:", resultado)   
+
     return all_data
 
 

@@ -504,8 +504,21 @@ class SbxCore:
                 return await resp.json()
 
     async def upsert(self, model, data, let_null=False):
-        query = self.query_builder_to_insert(data, let_null).set_model(model).compile()
-        return await self.__then(query, self.is_update(data))
+        update_list = [item for item in data if "_KEY" in item]
+        insert_list = [item for item in data if "_KEY" not in item]
+
+        results = []
+
+        if update_list:
+            query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
+            results.append(await self.__then(query_update, self.is_update(update_list)))
+
+        if insert_list:
+            query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
+            results.append(await self.__then(query_insert, False))
+
+        return results
+
 
     async def __then(self, query_compiled, update):
         async with aiohttp.ClientSession() as session:
