@@ -33,14 +33,7 @@ async def main(sci):
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     
 
-    cleaned_data = [
-        {k: v for k, v in item.items() if not k.startswith('_META')}
-        for item in all_data["results"]
-    ]
-
     print("\n=== Probando Funcion upsert ===\n")
-    #print("all data results:", all_data["results"])
-    print("prueba de datos:" ,all_data["results"][0])
     resultado = await sci.upsert(os.environ["MODEL"],all_data["results"])
     print("\nResultado de upsert:", resultado)   
 
