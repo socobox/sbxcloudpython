@@ -270,9 +270,10 @@ class Find:
                 break
         return total_res
 
-    async def find_all_generator(self, page_size=1000, max_page_size=2000):
+    async def find_all_generator(self, page_size=1000):
+        max_page_size=1000
         if page_size > max_page_size:
-            page_size = max_page_size
+            raise ValueError(f"El tamaño máximo permitido es {max_page_size}, pero se recibio {page_size}")
         self.set_page_size(page_size)
         self.set_page(1)
         self.set_url(True)
