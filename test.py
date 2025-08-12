@@ -30,8 +30,6 @@ async def main(sci):
 #    login = await  sci.login(os.environ['LOGIN'], os.environ['PASSWORD'], os.environ['DOMAIN'])
 #    domain = await sci.list_domain()
     sci.headers['Authorization'] = 'Bearer ' + os.environ['TOKEN']
-    
-    print("\n=== find_all ===\n")
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     
     print("\n=== Prueba de find_all_generator ===\n")
