@@ -2,6 +2,7 @@ from sbxpy.QueryBuilder import QueryBuilder as Qb
 from sbxpy.__init__ import SbxCore as Sc
 import asyncio
 import os
+from dotenv import load_dotenv
 
 '''
 This is a test using the os environment:
@@ -9,6 +10,7 @@ credentials app: APP-KEY, DOMAIN
 credentials user: LOGIN, PASSWORD
 '''
 
+load_dotenv()
 async def main(sci):
 
     qb = Qb()
@@ -28,7 +30,14 @@ async def main(sci):
 #    login = await  sci.login(os.environ['LOGIN'], os.environ['PASSWORD'], os.environ['DOMAIN'])
 #    domain = await sci.list_domain()
     sci.headers['Authorization'] = 'Bearer ' + os.environ['TOKEN']
+    
+    print("\n=== find_all ===\n")
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
+    
+    print("\n=== Prueba de find_all_generator ===\n")
+    async for page_data in sci.with_model(os.environ["MODEL"]).find_all_generator():
+        print(f"Número de registros en esta página: {len(page_data["results"])}")
+
     return all_data
 
 

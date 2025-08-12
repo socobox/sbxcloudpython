@@ -270,6 +270,21 @@ class Find:
                 break
         return total_res
 
+    async def find_all_generator(self, page_size=1000):
+        self.set_page_size(page_size)
+        self.set_page(1)
+        self.set_url(True)
+        query_commpiled = self.query.compile()
+        data = await self.__then(query_commpiled)
+        yield data
+        if data["success"]:
+            total_pages = data["total_pages"]
+            for i in range(1, total_pages):
+                query_aux = copy.deepcopy(query_commpiled)
+                query_aux['page'] = total_pages
+                data = await self.__then(query_aux)
+                yield data
+
     async def find_all_query(self, page_size=1000, max_in_parallel=2):
         self.set_page_size(page_size)
         self.set_page(1)
