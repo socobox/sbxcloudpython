@@ -38,7 +38,8 @@ async def main(sci):
             {'_KEY': '475ab682-3ce6-4556-b160-0d5a9fd5ee13',"nombre": "Avion", "valor": 100000},
             {"nombre": "Juguete", "valor": 2323442}]
 
-    print(type(await sci.upsert(os.environ["MODEL"],(data))))
+    print("\n===Info Upsert===\n")
+    print(await sci.upsert(os.environ["MODEL"],(data)))
 
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     print("\n===Despues de la insercion===\n",all_data)

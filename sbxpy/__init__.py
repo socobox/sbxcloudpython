@@ -506,14 +506,16 @@ class SbxCore:
     async def upsert(self, model, data, let_null=False):
         update_list = [item for item in data if "_KEY" in item]
         insert_list = [item for item in data if "_KEY" not in item]
-        results = {"update": None, "insert": None}
+        merged_results = {"success": True}
         if update_list:
             query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
-            results['update'] = await self.__then(query_update, self.is_update(update_list))
+            result_update = await self.__then(query_update, self.is_update(update_list))
+            merged_results['success'] = merged_results['success'] and result_update.get("success",False)
         if insert_list:
             query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
-            results['insert'] = await self.__then(query_insert, False)
-        return results
+            results_insert= await self.__then(query_insert, False)
+            merged_results['success'] = merged_results['success'] and results_insert.get("success",False)
+        return merged_results
 
 
     async def __then(self, query_compiled, update):
