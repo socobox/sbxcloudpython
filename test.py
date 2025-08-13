@@ -32,11 +32,16 @@ async def main(sci):
     sci.headers['Authorization'] = 'Bearer ' + os.environ['TOKEN']
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     
+    print("\n===Antes de la insercion===\n",all_data)
 
-    print("\n=== Probando Funcion upsert ===\n")
-    resultado = await sci.upsert(os.environ["MODEL"],all_data["results"])
-    print("\nResultado de upsert:", resultado)   
+    data = [{"_KEY":"0dd93a43-ee70-4341-8a18-d197b3bf401f","nombre": "Lapiz y sacapuntas", "valor":2000},
+            {'_KEY': '475ab682-3ce6-4556-b160-0d5a9fd5ee13',"nombre": "Avion", "valor": 100000},
+            {"nombre": "Juguete", "valor": 2323442}]
 
+    print(type(await sci.upsert(os.environ["MODEL"],(data))))
+
+    all_data = await sci.with_model(os.environ["MODEL"]).find_all()
+    print("\n===Despues de la insercion===\n",all_data)
     return all_data
 
 

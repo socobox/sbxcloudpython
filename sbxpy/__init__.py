@@ -504,29 +504,16 @@ class SbxCore:
                 return await resp.json()
 
     async def upsert(self, model, data, let_null=False):
-        def remove_meta(obj):
-            if isinstance(obj, list):
-                return [{k: v for k, v in item.items() if k != "_META"} for item in obj] 
-            elif isinstance(obj, dict):
-                return {k: v for k, v in obj.items() if k != "_META"}
-            
-        if isinstance(data,list):
-            update_list = [item for item in data if "_KEY" in item]
-            insert_list = [item for item in data if "_KEY" not in item]
-            update_list = remove_meta(update_list)
-            insert_list = remove_meta(insert_list)
-            results = {}
-            if update_list:
-                query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
-                results["update"]=(await self.__then(query_update, self.is_update(update_list)))
-            if insert_list:
-                query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
-                results["insert"]=(await self.__then(query_insert, False))
-            return results
-        else:
-            clean_data = remove_meta(data)
-            query = self.query_builder_to_insert(clean_data, let_null).set_model(model).compile()
-            return await self.__then(query, self.is_update(clean_data))
+        update_list = [item for item in data if "_KEY" in item]
+        insert_list = [item for item in data if "_KEY" not in item]
+        results = {"update": None, "insert": None}
+        if update_list:
+            query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
+            results['update'] = await self.__then(query_update, self.is_update(update_list))
+        if insert_list:
+            query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
+            results['insert'] = await self.__then(query_insert, False)
+        return results
 
 
     async def __then(self, query_compiled, update):
