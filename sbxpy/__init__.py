@@ -511,10 +511,19 @@ class SbxCore:
             query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
             result_update = await self.__then(query_update, self.is_update(update_list))
             merged_results['success'] = merged_results['success'] and result_update.get("success",False)
+            for k, v in result_update.items():
+                if k != "success":
+                    merged_results[k]=v
         if insert_list:
             query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
-            results_insert= await self.__then(query_insert, False)
-            merged_results['success'] = merged_results['success'] and results_insert.get("success",False)
+            result_insert= await self.__then(query_insert, False)
+            merged_results['success'] = merged_results['success'] and result_insert.get("success",False)
+            for k, v in result_insert.items():
+                if k != "success":
+                    if k in merged_results and isinstance(v,list):
+                        merged_results[k].extend(v)
+                    else:
+                        merged_results[k]=v
         return merged_results
 
 
