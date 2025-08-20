@@ -43,6 +43,11 @@ async def main(sci):
 
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     print("\n===Despues de la insercion===\n",all_data)
+
+    print("\n=== Prueba de find_all_generator ===\n")
+    async for page_data in sci.with_model(os.environ["MODEL"]).find_all_generator():
+        print(f"Número de registros en esta página: {len(page_data["results"])}")
+
     return all_data
 
 
