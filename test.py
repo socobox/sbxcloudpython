@@ -32,18 +32,6 @@ async def main(sci):
     sci.headers['Authorization'] = 'Bearer ' + os.environ['TOKEN']
     all_data = await sci.with_model(os.environ["MODEL"]).find_all()
     
-    print("\n===Antes de la insercion===\n",all_data)
-
-    data = [{"_KEY":"0dd93a43-ee70-4341-8a18-d197b3bf401f","nombre": "Lapiz y sacapuntas", "valor":2000},
-            {'_KEY': '475ab682-3ce6-4556-b160-0d5a9fd5ee13',"nombre": "Avion", "valor": 100000},
-            {"nombre": "Juguete", "valor": 2323442}]
-
-    print("\n===Info Upsert===\n")
-    print(await sci.upsert(os.environ["MODEL"],(data)))
-
-    all_data = await sci.with_model(os.environ["MODEL"]).find_all()
-    print("\n===Despues de la insercion===\n",all_data)
-
     print("\n=== Prueba de find_all_generator ===\n")
     async for page_data in sci.with_model(os.environ["MODEL"]).find_all_generator():
         print(f"Número de registros en esta página: {len(page_data["results"])}")
