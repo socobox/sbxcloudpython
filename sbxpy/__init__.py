@@ -522,8 +522,28 @@ class SbxCore:
                 return await resp.json()
 
     async def upsert(self, model, data, let_null=False):
-        query = self.query_builder_to_insert(data, let_null).set_model(model).compile()
-        return await self.__then(query, self.is_update(data))
+        update_list = [item for item in data if "_KEY" in item]
+        insert_list = [item for item in data if "_KEY" not in item]
+        merged_results = {"success": True}
+        if update_list:
+            query_update = self.query_builder_to_insert(update_list, let_null).set_model(model).compile()
+            result_update = await self.__then(query_update, self.is_update(update_list))
+            merged_results['success'] = merged_results['success'] and result_update.get("success",False)
+            for k, v in result_update.items():
+                if k != "success":
+                    merged_results[k]=v
+        if insert_list:
+            query_insert = self.query_builder_to_insert(insert_list, let_null).set_model(model).compile()
+            result_insert= await self.__then(query_insert, False)
+            merged_results['success'] = merged_results['success'] and result_insert.get("success",False)
+            for k, v in result_insert.items():
+                if k != "success":
+                    if k in merged_results and isinstance(v,list):
+                        merged_results[k].extend(v)
+                    else:
+                        merged_results[k]=v
+        return merged_results
+
 
     async def __then(self, query_compiled, update):
         async with aiohttp.ClientSession() as session:
