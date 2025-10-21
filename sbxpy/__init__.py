@@ -266,7 +266,7 @@ class Find:
                         total_res["fetched_results"][k].update(v)
             else:
                 total_res["success"] = False
-                total_res["message"] = res["message"]
+                total_res["message"] = res["message"] if "message" in res else (res["error"] if "error" in res else "")
                 break
         return total_res
 
