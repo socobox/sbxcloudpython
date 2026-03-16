@@ -422,7 +422,10 @@ class SbxCore:
         'payment_token': '/payment/v1/token',
         'password': '/user/v1/password/request',
         'cloudscript_run': '/cloudscript/v1/run',
+        'cloudscript': '/cloudscript/v1.5',
         'domain': '/data/v1/row/model/list',
+        'model': '/data/v1/row/model',
+        'field': '/data/v1/field/model',
         'config': '/domain/v1/list/app'
     }
 
@@ -509,6 +512,27 @@ class SbxCore:
             async with session.get(self.p(self.urls['domain']), params=params, headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
+    async def create_model(self, name):
+        async with aiohttp.ClientSession() as session:
+            params = {'domain': self.environment['domain'], 'name': name}
+            async with session.post(self.p(self.urls['model']), params=params,
+                                    headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def create_field(self, model_id, name, field_type, reference_type=None):
+        async with aiohttp.ClientSession() as session:
+            params = {
+                'domain': self.environment['domain'],
+                'name': name,
+                'row_model_id': model_id,
+                'type': field_type
+            }
+            if field_type == 'REFERENCE' and reference_type is not None:
+                params['reference_type'] = reference_type
+            async with session.post(self.p(self.urls['field']), params=params,
+                                    headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
     async def get_config(self):
         async with aiohttp.ClientSession() as session:
             async with session.get(self.p(self.urls['config']), params={}, headers=self.get_headers_json()) as resp:
@@ -519,6 +543,33 @@ class SbxCore:
             params = {'key': key, 'params': params}
             async with session.post(self.p(self.urls['cloudscript_run'] if url is None else url), json=params,
                                     headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def create_cloudscript(self, name, script='{}'):
+        async with aiohttp.ClientSession() as session:
+            url = f"{self.p(self.urls['cloudscript'])}/{self.environment['domain']}"
+            async with session.post(url, json={'name': name, 'script': script},
+                                    headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def list_cloudscripts(self, page=1):
+        async with aiohttp.ClientSession() as session:
+            url = f"{self.p(self.urls['cloudscript'])}/{self.environment['domain']}"
+            async with session.get(url, params={'page': page},
+                                   headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def get_cloudscript(self, key):
+        async with aiohttp.ClientSession() as session:
+            url = f"{self.p(self.urls['cloudscript'])}/{self.environment['domain']}/{key}"
+            async with session.get(url, headers=self.get_headers_json()) as resp:
+                return await resp.json()
+
+    async def update_cloudscript(self, key, script, test_script=''):
+        async with aiohttp.ClientSession() as session:
+            url = f"{self.p(self.urls['cloudscript'])}/{self.environment['domain']}/{key}/script"
+            async with session.put(url, json={'script': script, 'test_script': test_script},
+                                   headers=self.get_headers_json()) as resp:
                 return await resp.json()
 
     async def upsert(self, model, data, let_null=False):
