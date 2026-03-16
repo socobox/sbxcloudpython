@@ -1,14 +1,14 @@
 # sbxcloudpython
 
-This is the first version of Python Library for SbxCloud. The min Python version require is 3.13, this library depends on courutines with asyncio in order to use concurrent task, and uses aiohttp to do the request. You can test using the test.py file, before execute it, configuring your credentials in the environment.
+This is the first version of Python Library for SbxCloud. The min Python version require is 3.12, this library depends on courutines with asyncio in order to use concurrent task, and uses aiohttp to do the request. You can test using the test.py file, before execute it, configuring your credentials in the environment.
 
 
-/cl# SBXCloud Project
+# SBXCloud Project
 
 ## Project Setup
 
 - Package manager: **uv**
-- Python: >= 3.13.1
+- Python: >= 3.12
 - Run: `uv run main.py`
 - Install deps: `uv sync`
 - Add dep: `uv add <package>`
