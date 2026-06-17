@@ -40,6 +40,29 @@ class QueryBuilder:
         self.q['fetch'] = array_of_model_names
         return self
 
+    def select(self, fields):
+        # Field projection (server key "select"/"fields"). _KEY and _META are always
+        # returned by the server. Omit/empty -> full row (legacy behavior).
+        if fields:
+            self.q['select'] = list(fields)
+        return self
+
+    def set_array_type(self, array_type):
+        # "object_array" (legacy default) | "column_oriented" ({headers, data}).
+        self.q['array_type'] = array_type
+        return self
+
+    def set_timezone(self, tz):
+        # Optional IANA timezone for STEP date-DSL evaluation (server-side, opt-in).
+        self.q['timezone'] = tz
+        return self
+
+    def add_sort(self, field, order="ASC"):
+        # New sort-array form: [{"field": ..., "order": "ASC"|"DESC"}]. Needed to sort
+        # by _META.created / _META.updated. Legacy order_by() is left untouched.
+        self.q.setdefault('sort', []).append({"field": field, "order": str(order).upper()})
+        return self
+
     def reverse_fetch(self, array_of_model_names):
         self.q['rev_fetch'] = array_of_model_names
         return self
@@ -112,6 +135,11 @@ class QueryBuilder:
 
             if 'order_by' in self.q:
                 del self.q['order_by']
+
+            # find-only keys never belong on an insert/update payload
+            for find_only_key in ('select', 'array_type', 'timezone', 'sort'):
+                if find_only_key in self.q:
+                    del self.q[find_only_key]
 
         return self.q
 

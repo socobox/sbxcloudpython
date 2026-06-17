@@ -1,10 +1,17 @@
 from sbxpy.QueryBuilder import QueryBuilder as Qb
+from sbxpy.timedsl import Step
+from sbxpy.columns import column_to_objects
 import aiohttp
 import asyncio
 import copy
 import math
 from threading import Thread
 import datetime
+
+# Field-name constants for row metadata. WHERE and sort use these names;
+# the response nests them under "_META" as created_time / updated_time.
+META_CREATED = "_META.created"
+META_UPDATED = "_META.updated"
 
 '''
 :mod:`sbxpy` -- Main Library
@@ -199,6 +206,69 @@ class Find:
         self.query.reverse_fetch(array)
         return self
 
+    def select(self, *fields):
+        # Field projection. Accepts select("a", "b") or select(["a", "b"]).
+        # _KEY and _META are always returned by the server. Additive: omit -> full row.
+        flat = []
+        for f in fields:
+            if isinstance(f, (list, tuple, set)):
+                flat.extend(f)
+            else:
+                flat.append(f)
+        self.query.select(flat)
+        return self
+
+    def set_array_type(self, array_type):
+        # "object_array" (legacy) | "column_oriented".
+        # "column_oriented" returns results as {headers, data} (smaller wire payload).
+        # The raw response keeps that shape; use SBXResponse.to_objects()/all()/first()
+        # to reconstruct rows. find_all()/delete() normalize column pages internally,
+        # so they work with either layout.
+        self.query.set_array_type(array_type)
+        return self
+
+    def column_oriented(self):
+        # Request the compact {headers, data} response layout. See set_array_type().
+        return self.set_array_type("column_oriented")
+
+    def object_array(self):
+        # Explicitly request the legacy object-array response layout.
+        return self.set_array_type("object_array")
+
+    def set_timezone(self, tz):
+        # Optional IANA timezone for STEP date-DSL evaluation (opt-in, server-side).
+        self.query.set_timezone(tz)
+        return self
+
+    def sort_by(self, field, order="ASC"):
+        # New sort-array form, required to sort by _META.created / _META.updated.
+        # Legacy order_by() still works against old servers.
+        self.query.add_sort(field, order)
+        return self
+
+    # --- _META convenience WHERE helpers (sugar over and_where_* with the
+    #     _META.created / _META.updated field names). Values may be literals or
+    #     Step.*(...) STEP expressions. ---
+    def and_where_created_after(self, value):
+        return self.and_where_greater_or_equal_than(META_CREATED, value)
+
+    def and_where_created_before(self, value):
+        return self.and_where_less_or_equal_than(META_CREATED, value)
+
+    def and_where_created_between(self, start, end):
+        self.and_where_greater_or_equal_than(META_CREATED, start)
+        return self.and_where_less_or_equal_than(META_CREATED, end)
+
+    def and_where_updated_after(self, value):
+        return self.and_where_greater_or_equal_than(META_UPDATED, value)
+
+    def and_where_updated_before(self, value):
+        return self.and_where_less_or_equal_than(META_UPDATED, value)
+
+    def and_where_updated_between(self, start, end):
+        self.and_where_greater_or_equal_than(META_UPDATED, start)
+        return self.and_where_less_or_equal_than(META_UPDATED, end)
+
     def set_page(self, page):
         self.query.set_page(page)
         return self
@@ -226,13 +296,21 @@ class Find:
         self.set_url(True)
         return await self.__then(self.query.compile())
 
+    async def find_old(self):
+        # Legacy find endpoint (/data/v1/row/find/old). Same request shape as find();
+        # provided for parity with older servers / the legacy default page size.
+        self.url = self.sbx_core.urls['find_old']
+        return await self.__then(self.query.compile())
+
     async def delete(self, page_size=1000, max_in_parallel=2):
         self.set_url(False)
         if "keys" in self.query.q['where']:
             return await self.__then(self.query.compile())
         else:
             response = await self.find_all_query(page_size=page_size, max_in_parallel=max_in_parallel)
-            self.where_with_keys([result["_KEY"] for resp in response for result in resp["results"]])
+            # normalize column-oriented pages so _KEY extraction works regardless of array_type
+            self.where_with_keys([result["_KEY"] for resp in response
+                                  for result in column_to_objects(resp.get("results"))])
             return await self.__then(self.query.compile())
 
 
@@ -251,14 +329,28 @@ class Find:
         self.sbx_core.make_callback(self.find(), callback)
 
     def merge_results(self, results):
+        # The merged result preserves the per-page layout: column-oriented pages stay
+        # column-oriented ({headers, data} with all pages' data concatenated), object-array
+        # pages stay an object array. To get plain rows from a column-oriented merge, the
+        # caller converts explicitly via SBXResponse.to_objects() / column_to_objects().
         total_res = {
             "success": True,
             "results": [],
             "fetched_results": {},
         }
+        column_headers = None  # set -> emit column-oriented output
+        column_data = []
         for res in results:
             if res["success"]:
-                total_res["results"] =  total_res["results"] + res["results"]
+                page_results = res.get("results")
+                if (isinstance(page_results, dict)
+                        and "headers" in page_results and "data" in page_results):
+                    # column-oriented page: keep headers once, concatenate data rows
+                    if column_headers is None:
+                        column_headers = page_results["headers"]
+                    column_data.extend(page_results.get("data", []))
+                elif page_results:
+                    total_res["results"] = total_res["results"] + page_results
                 if "fetched_results" in res:
                     for k,v in res["fetched_results"].items():
                         if k not in total_res["fetched_results"]:
@@ -268,6 +360,9 @@ class Find:
                 total_res["success"] = False
                 total_res["message"] = res["message"] if "message" in res else (res["error"] if "error" in res else "")
                 break
+        if column_headers is not None:
+            total_res["results"] = {"headers": column_headers, "data": column_data}
+            total_res["array_type"] = "column_oriented"
         return total_res
 
     async def find_all_generator(self, page_size=1000):
@@ -410,6 +505,7 @@ class SbxCore:
         'validate': '/user/v1/validate',
         'row': '/data/v1/row',
         'find': '/data/v1/row/find',
+        'find_old': '/data/v1/row/find/old',
         'update': '/data/v1/row/update',
         'delete': '/data/v1/row/delete',
         'downloadFile': '/content/v1/download',

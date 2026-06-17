@@ -24,7 +24,10 @@ class MetaModel(BaseModel):
 class SBXModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     key: Optional[str] = Field(None, alias="_KEY")
-    _META: Optional[MetaModel] = None
+    # Row metadata (created_time / updated_time). Populated from the response "_META"
+    # object. A leading-underscore field name would be treated by pydantic as a private
+    # attribute and never populated, so we expose it as `meta` aliased to "_META".
+    meta: Optional[MetaModel] = Field(None, alias="_META")
 
     @classmethod
     def get_model(cls):

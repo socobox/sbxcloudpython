@@ -1,13 +1,15 @@
 import logging
 import os
 from abc import ABCMeta
-from typing import Type, Optional, TypeVar, List
+from typing import Type, Optional, TypeVar, List, Union
 
 from deepmerge import always_merger
 from pydantic import BaseModel, ValidationError
 from sbxpy import SbxCore as Sc, Find, SbxCore
 
 from sbxpy.cache import get_redis_service
+# re-exported for backward compatibility (`from sbxpy.sbx import column_to_objects`)
+from sbxpy.columns import column_to_objects
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,8 +65,14 @@ class SBX:
 class SBXResponse(BaseModel):
     success: bool
     message: Optional[str] = None
-    results: Optional[List[dict]] = None
+    # results is a list (legacy / object_array) or a column-oriented {headers, data}
+    # dict. It is kept raw exactly as the server sent it; use to_objects() to get rows.
+    results: Optional[Union[List[dict], dict]] = None
     fetched_results: Optional[dict[str, dict[str, dict]]] = None
+
+    def to_objects(self) -> List[dict]:
+        """Return rows as a list of dicts regardless of array_type layout."""
+        return column_to_objects(self.results) if self.results is not None else []
 
     @staticmethod
     def merge(responses: List[dict]) -> "SBXResponse":
@@ -75,7 +83,8 @@ class SBXResponse(BaseModel):
 
         for response in sbx_responses:
             if response.results:
-                merged_results.extend(response.results)
+                # tolerate column-oriented pages by reconstructing before extending
+                merged_results.extend(response.to_objects())
 
             if response.fetched_results:
                 # deep merge fetched results dictionaries
@@ -91,12 +100,13 @@ class SBXResponse(BaseModel):
         )
 
     def has_results(self) -> bool:
-        return self.success and self.results is not None and len(self.results) > 0
+        return self.success and len(self.to_objects()) > 0
 
     def first(self, type_def: Type[T]) -> Optional[T]:
         try:
-            if self.results:
-                return type_def(**self.results[0])
+            objs = self.to_objects()
+            if objs:
+                return type_def(**objs[0])
         except ValidationError as e:
             logger.error(
                 f"Pydantic validation error for type_def: {type_def}, errors: {e.errors()}"
@@ -105,9 +115,7 @@ class SBXResponse(BaseModel):
         return None
 
     def all(self, type_def: Type[T]) -> List[T]:
-        if self.results:
-            return [type_def(**result) for result in self.results]
-        return []
+        return [type_def(**result) for result in self.to_objects()]
 
     #     given a dictionary of [string:[string:dic]] return a Type[T] dictionary
     # in other words, given a json of { "fetched_results": { "model": { "key": { "field": "value" } } } }

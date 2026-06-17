@@ -36,7 +36,7 @@ All library code lives in `sbxpy/`. The `build/` directory contains stale build 
 Contains multiple client classes, each following the same pattern: initialize with domain/credentials, build queries, execute async HTTP requests via aiohttp.
 
 - **`SbxCore`** — Main SBXCloud client. Handles auth, CRUD (`upsert`, `login`), cloudscript management (`run`, `create_cloudscript`, `list_cloudscripts`, `get_cloudscript`, `update_cloudscript`), model/field management (`create_model`, `create_field`, `list_domain`), and creates `Find` query objects via `with_model()`.
-- **`Find`** — Fluent query builder for find/delete operations. Supports `and_where_*`/`or_where_*` conditions, `fetch_models` (JOINs), pagination, `find_all()` with concurrent page fetching via semaphore-limited `asyncio.gather`.
+- **`Find`** — Fluent query builder for find/delete operations. Supports `and_where_*`/`or_where_*` conditions, `fetch_models` (JOINs), pagination, `find_all()` with concurrent page fetching via semaphore-limited `asyncio.gather`. Also supports the additive find features (all opt-in — see below): `select(*fields)` (field projection), `column_oriented()`/`object_array()`/`set_array_type()`, `sort_by(field, order)` (new `sort` array, needed for `_META` sorting), `set_timezone(tz)`, `_META` WHERE helpers (`and_where_created_after/before/between`, `and_where_updated_after/before/between`), and `find_old()` (legacy `/data/v1/row/find/old`).
 - **`SbxEvent` / `EventQuery`** — Client for the SBXCloud event service (separate base URL, uses `sbx-secret` header).
 - **`SbxWorkflow` / `WorkflowQuery`** — Client for workflow/process execution API.
 - **`SbxCRMUser` / `UserQuery`** — Client for CRM user management API.
@@ -44,11 +44,15 @@ Contains multiple client classes, each following the same pattern: initialize wi
 
 ### `sbxpy/QueryBuilder.py`
 
-Low-level query JSON builder. Constructs the `where`, `rows`, `fetch`, `order_by`, and `page`/`size` parameters sent to the SBXCloud API.
+Low-level query JSON builder. Constructs the `where`, `rows`, `fetch`, `order_by`, and `page`/`size` parameters sent to the SBXCloud API. Additive find keys (`select`, `array_type`, `timezone`, `sort`) are emitted **only** when their setters are called; `compile()` strips them from insert/update (`rows`) payloads.
+
+### `sbxpy/timedsl.py`
+
+- **`Step`** — Builders for the STEP date DSL (`docs/DATES-QUERY-DSL.md`). Produce `${...}` expression strings (`Step.last("7d")`, `Step.this("week")`, `Step.start_of("day", tz="America/New_York")`, `Step.now("-7d")`, `Step.expr("last 7 days")`). Pass the result as a WHERE value. Re-exported as `sbxpy.Step`.
 
 ### `sbxpy/domain/__init__.py`
 
-- **`SBXModel`** — Pydantic BaseModel base class for all domain models. Maps `_KEY` to `key` field. Hashable by key.
+- **`SBXModel`** — Pydantic BaseModel base class for all domain models. Maps `_KEY` to `key` field and `_META` to the `meta` field (a `MetaModel`). Hashable by key.
 - **`@sbx(model="name")`** — Decorator that binds a model class to an SBXCloud model name (stored as `cls._model`).
 - **`MetaModel`** — Timestamps sub-model (`created_time`, `updated_time`).
 
@@ -56,7 +60,7 @@ Low-level query JSON builder. Constructs the `where`, `rows`, `fetch`, `order_by
 
 - **`SBX`** — Singleton accessor for `SbxCore`, reads credentials from env vars.
 - **`SBXService`** — Abstract base with `find()`, `get_by_key()`, `list_all()` convenience methods.
-- **`SBXResponse`** — Pydantic model wrapping API responses. Key methods: `all(Type)`, `first(Type)`, `get_ref(model, key, Type)`, `merge()`, `has_results()`.
+- **`SBXResponse`** — Pydantic model wrapping API responses. Key methods: `all(Type)`, `first(Type)`, `get_ref(model, key, Type)`, `merge()`, `has_results()`, `to_objects()`. `results` is kept raw — it is either a legacy object array or the column-oriented `{headers, data}` dict. `to_objects()` (and the module-level `column_to_objects()`) reconstruct rows (nesting `_META.*` headers back under `_META`); `all()`/`first()`/`has_results()` route through it, so they work with either layout.
 
 ### `sbxpy/cache/__init__.py`
 
@@ -71,8 +75,18 @@ Low-level query JSON builder. Constructs the `where`, `rows`, `fetch`, `order_by
 ### Data
 - `POST /data/v1/row` — insert records
 - `POST /data/v1/row/update` — update records
-- `POST /data/v1/row/find` — query records
+- `POST /data/v1/row/find` — query records (`find()`)
+- `POST /data/v1/row/find/old` — legacy query endpoint (`find_old()`)
 - `POST /data/v1/row/delete` — delete records
+
+#### Additive find features (opt-in, backward-compatible)
+
+These map to new server capabilities (`docs/FIND-SELECT-AND-ARRAY-TYPE.md`, `docs/DATES-QUERY-DSL.md`). They are **emitted only when explicitly requested**, so a default query compiles byte-identically to before and works against old servers, which ignore unknown request keys and always return legacy object-array `results`:
+
+- **`select` / `fields`** — field projection via `Find.select(*fields)` (`_KEY`/`_META` always returned).
+- **`array_type: "column_oriented"`** — `Find.column_oriented()`; the response `results` becomes `{headers, data}` (smaller wire payload). The library never converts implicitly: `find_all()`/`merge_results()` keep a column-oriented merge column-oriented (one `headers` + all pages' `data` concatenated, with `array_type` echoed); object-array pages stay a list. Convert explicitly via `SBXResponse.to_objects()`/`all()`/`first()` or the standalone `column_to_objects()` (in `sbxpy.columns`, re-exported from `sbxpy.sbx`). `delete()` extracts keys internally regardless of layout.
+- **`_META.created` / `_META.updated`** — usable in WHERE (constants `META_CREATED`/`META_UPDATED` or the `and_where_*` `_META` helpers) and in `sort_by(field, order)` (new `sort` array; legacy `order_by` is unchanged).
+- **STEP date DSL + `timezone`** — wrap date values with `Step.*` (`${...}`) and optionally `set_timezone(tz)`. STEP/`_META.*` against an old server is a caller choice (old server treats `${...}` literally / may reject `_META.*`); the library never injects them implicitly.
 
 ### Models & Fields
 - `GET /data/v1/row/model/list?domain={id}` — list models (`list_domain()`)
